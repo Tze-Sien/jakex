@@ -1,0 +1,47 @@
+{
+    "name": "@repo/database",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./schema": {
+            "import": "./dist/schema.mjs",
+            "require": "./dist/schema.js",
+            "types": "./dist/schema.d.ts"
+        },
+        "./client": {
+            "import": "./dist/client.mjs",
+            "require": "./dist/client.js",
+            "types": "./dist/client.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:push": "drizzle-kit push",
+        "db:studio": "drizzle-kit studio",
+        "db:pull": "drizzle-kit introspect",
+        "lint": "eslint . --max-warnings 0",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "drizzle-orm": "^0.38.3",
+        "postgres": "^3.4.5"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "*",
+        "@types/node": "^22.15.3",
+        "drizzle-kit": "^0.30.4",
+        "tsup": "^8.4.0",
+        "typescript": "5.9.2"
+    }
+}

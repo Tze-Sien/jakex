@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Drizzle
+drizzle/meta/
+
+# IDE
+.idea/
+*.swp
+*.swo
