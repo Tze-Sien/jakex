@@ -1,0 +1,344 @@
+Project jakex {
+  database_type: 'PostgreSQL'
+  note: '''
+    # JakeX Database Schema
+    
+    Using Supabase as the backend with:
+    - Supabase Auth for authentication (OAuth providers: Google, Facebook, etc.)
+    - Drizzle ORM for database operations
+    - Row Level Security (RLS) for data protection
+  '''
+}
+
+Table profiles {
+  id uuid [pk, note: 'References auth.users.id (1:1 relationship)']
+  full_name text [note: 'User full name']
+  avatar_url text [note: 'Profile picture URL (from OAuth or uploaded)']
+  updated_at timestamp [default: `now()`, note: 'Last update timestamp']
+  
+  Note: '''
+    Custom user profiles extending Supabase auth.users.
+    
+    This table is created automatically when a new user signs up
+    using a PostgreSQL trigger function. Only essential fields are stored here;
+    auth metadata (email, phone, etc.) is managed by Supabase in auth.users.
+    
+    RLS Policies:
+    - SELECT: Users can read their own profile
+    - UPDATE: Users can update their own profile
+    - INSERT: Handled by trigger (on auth.users insert)
+  '''
+}
+
+Table meta_connections {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [ref: > profiles.id, not null, note: 'References the user who owns this connection']
+  
+  // Meta Account Info
+  meta_user_id text [not null, note: 'Facebook/Meta user ID']
+  meta_user_name text [note: 'Display name from Meta account']
+  meta_email text [note: 'Email associated with Meta account']
+  
+  // Token Storage
+  access_token text [not null, note: 'Encrypted long-lived access token']
+  granted_scopes text[] [not null, note: 'Granted permissions e.g., ads_read, ads_management']
+  
+  // Connection Status
+  status text [not null, default: 'active', note: 'active | revoked | invalid']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    (user_id, meta_user_id) [unique, note: 'Prevent duplicate connections to same Meta account']
+  }
+  
+  Note: '''
+    Stores Meta/Facebook OAuth connections for Marketing API access.
+    
+    One user can connect MULTIPLE Meta accounts (personal, business, agency, etc.).
+    Each Meta connection can access multiple ad accounts.
+    
+    Token Lifecycle:
+    - Marketing API tokens with Standard Access do NOT expire by time
+    - Tokens can be invalidated if user changes password or revokes access
+    - Token validity is checked on API usage; status updated if invalid
+    
+    Security:
+    - access_token MUST be encrypted at rest
+    
+    RLS Policies:
+    - SELECT: Users can only view their own connections
+    - INSERT: Authenticated users can add connections
+    - UPDATE: Users can only update their own connections
+    - DELETE: Users can only delete their own connections
+  '''
+}
+
+Table ad_accounts {
+  id uuid [pk, default: `gen_random_uuid()`]
+  meta_connection_id uuid [ref: > meta_connections.id, not null, note: 'Which Meta connection this belongs to']
+  
+  // Meta Ad Account Info (from API)
+  meta_ad_account_id text [not null, note: 'Meta Ad Account ID (format: act_xxxxx)']
+  name text [note: 'Ad account name from Meta']
+  currency text [note: 'Account currency code (USD, MYR, etc.)']
+  timezone text [note: 'Account timezone (e.g., Asia/Kuala_Lumpur)']
+  account_status int [note: 'Meta account status code: 1=active, 2=disabled, etc.']
+  
+  // Sync tracking
+  last_synced_at timestamptz [note: 'When we last fetched this from Meta API']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    (meta_connection_id, meta_ad_account_id) [unique, note: 'Prevent duplicate ad accounts per connection']
+  }
+  
+  Note: '''
+    Cached Meta Ad Accounts accessible by a Meta connection.
+    
+    Populated when user connects Meta account or manually syncs.
+    One Meta connection can access multiple ad accounts (personal, business manager, etc.).
+    
+    RLS Policies:
+    - SELECT: Users can view ad accounts from their own connections
+    - INSERT/UPDATE: System only (via API sync)
+    - DELETE: Cascade when meta_connection is deleted
+  '''
+}
+
+Table campaigns {
+  id uuid [pk, default: `gen_random_uuid()`]
+  ad_account_id uuid [ref: > ad_accounts.id, not null, note: 'Which ad account this belongs to']
+  
+  // Meta Campaign Info (from API)
+  meta_campaign_id text [not null, note: 'Meta Campaign ID']
+  name text [note: 'Campaign name from Meta']
+  objective text [note: 'Campaign objective (CONVERSIONS, TRAFFIC, etc.)']
+  status text [note: 'ACTIVE, PAUSED, DELETED, ARCHIVED']
+  
+  // Budget (stored in cents to avoid floating point issues)
+  daily_budget bigint [note: 'Daily budget in cents (null if using lifetime)']
+  lifetime_budget bigint [note: 'Lifetime budget in cents (null if using daily)']
+  
+  // Sync tracking
+  last_synced_at timestamptz [note: 'When we last fetched this from Meta API']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    (ad_account_id, meta_campaign_id) [unique, note: 'Prevent duplicate campaigns per ad account']
+  }
+  
+  Note: '''
+    Cached Meta Campaigns for an ad account.
+    
+    Populated when user selects an ad account or generates a report.
+    
+    RLS Policies:
+    - SELECT: Users can view campaigns from their own ad accounts
+    - INSERT/UPDATE: System only (via API sync)
+  '''
+}
+
+Table ad_sets {
+  id uuid [pk, default: `gen_random_uuid()`]
+  campaign_id uuid [ref: > campaigns.id, not null, note: 'Which campaign this belongs to']
+  
+  // Meta Ad Set Info (from API)
+  meta_ad_set_id text [not null, note: 'Meta Ad Set ID']
+  name text [note: 'Ad set name from Meta']
+  status text [note: 'ACTIVE, PAUSED, DELETED, ARCHIVED']
+  
+  // Budget (stored in cents)
+  daily_budget bigint [note: 'Daily budget in cents']
+  lifetime_budget bigint [note: 'Lifetime budget in cents']
+  
+  // Targeting & Optimization
+  optimization_goal text [note: 'What Meta optimizes for (CONVERSIONS, LINK_CLICKS, etc.)']
+  bid_strategy text [note: 'LOWEST_COST_WITHOUT_CAP, COST_CAP, etc.']
+  targeting jsonb [note: 'Targeting settings snapshot (audiences, placements, etc.)']
+  
+  // Sync tracking
+  last_synced_at timestamptz [note: 'When we last fetched this from Meta API']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    (campaign_id, meta_ad_set_id) [unique, note: 'Prevent duplicate ad sets per campaign']
+  }
+  
+  Note: '''
+    Cached Meta Ad Sets for a campaign.
+    
+    This is the core entity for generating reports. Each ad set contains
+    the targeting, budget, and optimization settings that drive performance.
+    
+    RLS Policies:
+    - SELECT: Users can view ad sets from their own campaigns
+    - INSERT/UPDATE: System only (via API sync)
+  '''
+}
+
+Table ads {
+  id uuid [pk, default: `gen_random_uuid()`]
+  ad_set_id uuid [ref: > ad_sets.id, not null, note: 'Which ad set this belongs to']
+  
+  // Meta Ad Info (from API)
+  meta_ad_id text [not null, note: 'Meta Ad ID']
+  name text [note: 'Ad name from Meta']
+  status text [note: 'ACTIVE, PAUSED, DELETED, ARCHIVED']
+  
+  // Creative Info
+  creative_type text [note: 'IMAGE, VIDEO, CAROUSEL, COLLECTION']
+  thumbnail_url text [note: 'Preview image URL for display']
+  headline text [note: 'Ad headline/title']
+  body_text text [note: 'Ad body copy']
+  call_to_action text [note: 'CTA type: SHOP_NOW, LEARN_MORE, etc.']
+  destination_url text [note: 'Where the ad links to']
+  
+  // Creative metadata (for analysis)
+  creative_meta jsonb [note: '''
+    Additional creative details:
+    {
+      "video_length_seconds": 30,
+      "image_hash": "abc123",
+      "carousel_card_count": 3
+    }
+  ''']
+  
+  // Sync tracking
+  last_synced_at timestamptz [note: 'When we last fetched this from Meta API']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    (ad_set_id, meta_ad_id) [unique, note: 'Prevent duplicate ads per ad set']
+    (ad_set_id, status) [note: 'Get active ads in an ad set']
+  }
+  
+  Note: '''
+    Cached Meta Ads - the lowest level of the hierarchy.
+    
+    This is where individual creatives live. Each ad has:
+    - One creative (image, video, carousel, etc.)
+    - One set of copy (headline, body, CTA)
+    - One destination URL
+    
+    Recommendation Strategy:
+    1. Analyze each ad within an ad set
+    2. Compare metrics between ads in same ad set
+    3. Identify winners (high ROAS) and losers (low ROAS)
+    4. Recommend: "Stop Ad X, scale Ad Y"
+    
+    RLS Policies:
+    - SELECT: Users can view ads from their own ad sets
+    - INSERT/UPDATE: System only (via API sync)
+  '''
+}
+
+Table user_selected_ad_account {
+  user_id uuid [pk, ref: > profiles.id, note: 'Primary key = only ONE selection per user']
+  ad_account_id uuid [ref: > ad_accounts.id, not null, note: 'Currently selected ad account']
+  selected_at timestamptz [default: `now()`, note: 'When user made this selection']
+  
+  Note: '''
+    Ensures exactly ONE active ad account per user at any time.
+    
+    Using user_id as primary key makes it physically impossible to have
+    multiple selections. Changing selection is a simple UPSERT operation.
+    
+    Usage:
+    INSERT INTO user_selected_ad_account (user_id, ad_account_id)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id) DO UPDATE SET 
+      ad_account_id = EXCLUDED.ad_account_id,
+      selected_at = now();
+    
+    RLS Policies:
+    - SELECT: Users can view their own selection
+    - INSERT/UPDATE: Users can modify their own selection
+  '''
+}
+
+Table reports {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [ref: > profiles.id, not null, note: 'Who generated this report']
+  ad_account_id uuid [ref: > ad_accounts.id, not null, note: 'Which ad account this report is for']
+  
+  // Status
+  status text [not null, default: 'active', note: 'active | completed | failed']
+  
+  // Timestamps
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  Note: '''
+    Represents a "Generate Report" session initiated by the user.
+    
+    When a user clicks "Generate Report", we create this record,
+    then fetch data for all active campaigns, ad sets, and ads
+    across the 3 required time ranges.
+    
+    RLS Policies:
+    - SELECT: Users can view their own reports
+    - INSERT: Users can create reports
+  '''
+}
+
+Table insights {
+  id uuid [pk, default: `gen_random_uuid()`]
+  report_id uuid [ref: > reports.id, not null, note: 'Belongs to which report generation']
+  
+  // Entity Link (Polymorphic-ish association)
+  // Only ONE of these should be set per row
+  campaign_id uuid [ref: > campaigns.id, note: 'If metrics are for a campaign']
+  ad_set_id uuid [ref: > ad_sets.id, note: 'If metrics are for an ad set']
+  ad_id uuid [ref: > ads.id, note: 'If metrics are for an ad']
+  
+  // Time Dimension
+  time_range text [not null, note: 'today | 3d | 7d']
+  date_start date [not null]
+  date_end date [not null]
+  
+  // Core Metrics
+  spend bigint [not null, default: 0, note: 'In cents']
+  impressions bigint [not null, default: 0]
+  clicks bigint [not null, default: 0]
+  
+  // Calculated/Rate Metrics
+  ctr decimal(10,6) [note: 'Click-through rate']
+  cpc bigint [note: 'Cost per click in cents']
+  cpm bigint [note: 'Cost per 1000 impressions in cents']
+  
+  // Conversion Metrics
+  conversions bigint [not null, default: 0, note: 'Main conversion event (Purchases or Leads)']
+  cost_per_conversion bigint [note: 'Cost per main conversion in cents']
+  roas decimal(10,4) [note: 'Return on Ad Spend']
+  
+  indexes {
+    (report_id, campaign_id, time_range) [unique]
+    (report_id, ad_set_id, time_range) [unique]
+    (report_id, ad_id, time_range) [unique]
+  }
+  
+  Note: '''
+    Stores performance metrics snapshots for analysis.
+    
+    For every entity (Campaign, Ad Set, Ad) in the report, 
+    we store 3 rows: one for 'today', '3d', '7d'.
+    
+    This flat structure allows the AI to easily query:
+    "Get all 7d metrics for low ROAS ad sets"
+  '''
+}
