@@ -122,4 +122,29 @@
   body {
     @apply bg-background text-foreground;
     }
+
+  /* Mobile App Safe Area Support */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Prevent text selection on mobile for app-like feel */
+  @media (max-width: 1024px) {
+    button, a {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+  }
+
+  /* Smooth scrolling for mobile */
+  @media (max-width: 1024px) {
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }
