@@ -63,7 +63,7 @@ export default function SelectAccountPage() {
     setIsLoading(true);
     // Simulate API call to save selected accounts
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/collect-data");
     }, 1500);
   };
 
