@@ -1,10 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
 interface EmailLoginFormProps {
-    onSubmit: (e: React.FormEvent) => void;
+    onSubmit: (e: React.FormEvent, email: string, password: string) => void;
     onSwitchToOAuth: () => void;
     isLoading: boolean;
     loadingProvider: "facebook" | "google" | "email" | null;
@@ -16,8 +19,16 @@ export function EmailLoginForm({
     isLoading,
     loadingProvider,
 }: EmailLoginFormProps) {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit(e, email, password);
+    };
+
     return (
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
@@ -25,10 +36,13 @@ export function EmailLoginForm({
                 </Label>
                 <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="name@example.com"
                     required
                     disabled={isLoading}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-12 lg:h-10 text-base lg:text-sm"
                     autoComplete="email"
                 />
@@ -49,9 +63,12 @@ export function EmailLoginForm({
                 </div>
                 <Input
                     id="password"
+                    name="password"
                     type="password"
                     required
                     disabled={isLoading}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="h-12 lg:h-10 text-base lg:text-sm"
                     autoComplete="current-password"
                 />

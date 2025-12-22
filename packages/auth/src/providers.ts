@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "./client";
-import type { AuthError, OAuthResponse } from "@supabase/supabase-js";
+import type { AuthError, OAuthResponse, User, Session } from "@supabase/supabase-js";
 
 export type OAuthProvider = "facebook" | "google" | "github" | "twitter";
 
@@ -14,6 +14,14 @@ export interface SignInOptions {
 
 export interface SignInResult {
   data: OAuthResponse["data"];
+  error: AuthError | null;
+}
+
+export interface EmailAuthResult {
+  data: {
+    user: User | null;
+    session: Session | null;
+  };
   error: AuthError | null;
 }
 
@@ -119,4 +127,93 @@ export function onAuthStateChange(
 ) {
   const supabase = getSupabaseClient();
   return supabase.auth.onAuthStateChange(callback);
+}
+
+/**
+ * Sign up a new user with email and password.
+ * By default, the user needs to verify their email before signing in.
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  options?: {
+    emailRedirectTo?: string;
+    data?: Record<string, unknown>;
+  }
+): Promise<EmailAuthResult> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: options?.emailRedirectTo ?? `${window.location.origin}/auth/callback`,
+      data: options?.data,
+    },
+  });
+
+  return {
+    data: {
+      user: data.user,
+      session: data.session,
+    },
+    error,
+  };
+}
+
+/**
+ * Sign in an existing user with email and password.
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<EmailAuthResult> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  return {
+    data: {
+      user: data.user,
+      session: data.session,
+    },
+    error,
+  };
+}
+
+/**
+ * Send a password reset email.
+ */
+export async function resetPasswordForEmail(
+  email: string,
+  options?: {
+    redirectTo?: string;
+  }
+): Promise<{ error: AuthError | null }> {
+  const supabase = getSupabaseClient();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback?type=recovery`,
+  });
+
+  return { error };
+}
+
+/**
+ * Update the user's password.
+ * User must be logged in.
+ */
+export async function updatePassword(
+  newPassword: string
+): Promise<{ error: AuthError | null }> {
+  const supabase = getSupabaseClient();
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  return { error };
 }

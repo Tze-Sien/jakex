@@ -12,6 +12,10 @@ export {
   signInWithFacebook,
   signInWithGoogle,
   signInWithOAuth,
+  signUpWithEmail,
+  signInWithEmail,
+  resetPasswordForEmail,
+  updatePassword,
   signOut,
   getSession,
   getUser,
@@ -19,4 +23,20 @@ export {
   type OAuthProvider,
   type SignInOptions,
   type SignInResult,
+  type EmailAuthResult,
 } from "./providers";
+
+// Re-export hooks for Client Components
+export { useAuth, useRequireAuth, useRedirectIfAuthenticated } from "./hooks";
+
+// Re-export Auth Provider
+export { AuthProvider, useAuthContext } from "./AuthProvider";
+
+// Re-export server utilities for Server Components
+export {
+  createServerSupabaseClient,
+  createRouteHandlerClient,
+  getServerSession,
+  getServerUser,
+  requireAuth,
+} from "./server";

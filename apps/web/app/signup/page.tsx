@@ -1,19 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { signInWithEmail, signInWithFacebook, signInWithGoogle } from "@repo/auth";
+import { signUpWithEmail, signInWithFacebook, signInWithGoogle } from "@repo/auth";
+import { Button } from "@/components/ui/button";
 import {
   AnimatedBackground,
   HeroSection,
-} from "./components";
-import { UnifiedLoginForm } from "./components/UnifiedLoginForm";
+} from "../login/components";
+import { UnifiedSignUpForm } from "./components/UnifiedSignUpForm";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<
     "facebook" | "google" | "email" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
 
   const handleOAuthLogin = async (provider: "facebook" | "google") => {
     setIsLoading(true);
@@ -21,7 +25,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const result = provider === "facebook" 
+      const result = provider === "facebook"
         ? await signInWithFacebook()
         : await signInWithGoogle();
 
@@ -33,7 +37,6 @@ export default function LoginPage() {
       }
 
       // OAuth will handle redirect automatically
-      // If we reach here, the OAuth popup/redirect should have already happened
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);
@@ -41,22 +44,21 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailLogin = async (e: React.FormEvent, email?: string, password?: string) => {
+  const handleEmailSignUp = async (
+    e: React.FormEvent,
+    data: { email: string; password: string; fullName: string }
+  ) => {
     e.preventDefault();
     setIsLoading(true);
     setLoadingProvider("email");
     setError(null);
 
-    // Get form data if not passed as parameters
-    if (!email || !password) {
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
-      email = formData.get("email") as string;
-      password = formData.get("password") as string;
-    }
-
     try {
-      const result = await signInWithEmail(email, password);
+      const result = await signUpWithEmail(data.email, data.password, {
+        data: {
+          full_name: data.fullName,
+        },
+      });
 
       if (result.error) {
         setError(result.error.message);
@@ -65,14 +67,59 @@ export default function LoginPage() {
         return;
       }
 
-      // Successfully signed in - force a full page reload to ensure cookies are set
-      window.location.href = "/dashboard";
+      // Check if email confirmation is required
+      if (!result.data.session) {
+        setSuccess(true);
+        setIsLoading(false);
+        setLoadingProvider(null);
+      } else {
+        // User is automatically signed in
+        router.push("/authorize-meta");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);
       setLoadingProvider(null);
     }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <div className="space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold">Check your email</h2>
+            <p className="text-muted-foreground">
+              We&apos;ve sent you an email with a confirmation link. Please
+              click the link to verify your account.
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push("/login")}
+            variant="outline"
+            className="w-full"
+          >
+            Back to login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -96,10 +143,10 @@ export default function LoginPage() {
                     {/* Header */}
                     <div className="space-y-2">
                       <h3 className="text-2xl font-bold text-foreground">
-                        Welcome back
+                        Create your account
                       </h3>
                       <p className="text-muted-foreground">
-                        Sign in to access your dashboard
+                        Get started with JakeX today
                       </p>
                     </div>
 
@@ -110,9 +157,9 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    {/* Unified Login Form */}
-                    <UnifiedLoginForm
-                      onEmailLogin={handleEmailLogin}
+                    {/* Unified Sign Up Form */}
+                    <UnifiedSignUpForm
+                      onEmailSignUp={handleEmailSignUp}
                       onOAuthLogin={handleOAuthLogin}
                       isLoading={isLoading}
                       loadingProvider={loadingProvider}
@@ -121,12 +168,12 @@ export default function LoginPage() {
                     {/* Footer */}
                     <div className="text-center pt-2">
                       <p className="text-sm text-muted-foreground">
-                        Don&apos;t have an account?{" "}
+                        Already have an account?{" "}
                         <a
-                          href="/signup"
+                          href="/login"
                           className="text-primary hover:underline font-medium"
                         >
-                          Sign up
+                          Sign in
                         </a>
                       </p>
                     </div>
@@ -154,7 +201,6 @@ export default function LoginPage() {
 
       {/* Mobile App View */}
       <div className="lg:hidden min-h-screen bg-background flex flex-col">
-        {/* Top App Bar */}
         <div className="safe-area-top bg-background/95 backdrop-blur-md border-b border-border/50">
           <div className="px-6 py-4 flex items-center justify-center">
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-linear-to-br from-primary to-chart-2">
@@ -176,20 +222,18 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Scrollable Content Area - Centered */}
         <div className="flex-1 overflow-y-auto flex items-center">
           <div className="w-full px-6 py-8 space-y-8">
-            {/* Welcome Section */}
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-bold text-foreground">
-                Welcome back
+                Create account
               </h2>
               <p className="text-muted-foreground text-base">
-                Sign in to continue to your account
+                Get started with JakeX today
               </p>
             </div>
 
-            {/* Login Form - Mobile Optimized */}
+            {/* Sign Up Form - Mobile Optimized */}
             <div className="space-y-6">
               {/* Error Message */}
               {error && (
@@ -200,8 +244,8 @@ export default function LoginPage() {
 
               {/* Card */}
               <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-3xl p-8 shadow-lg">
-                <UnifiedLoginForm
-                  onEmailLogin={handleEmailLogin}
+                <UnifiedSignUpForm
+                  onEmailSignUp={handleEmailSignUp}
                   onOAuthLogin={handleOAuthLogin}
                   isLoading={isLoading}
                   loadingProvider={loadingProvider}
@@ -210,12 +254,12 @@ export default function LoginPage() {
                 {/* Footer */}
                 <div className="text-center pt-6">
                   <p className="text-sm text-muted-foreground">
-                    Don&apos;t have an account?{" "}
+                    Already have an account?{" "}
                     <a
-                      href="/signup"
+                      href="/login"
                       className="text-primary font-semibold active:opacity-70 transition-opacity"
                     >
-                      Sign up
+                      Sign in
                     </a>
                   </p>
                 </div>
@@ -224,7 +268,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom Safe Area with Footer */}
         <div className="safe-area-bottom bg-background/95 backdrop-blur-md border-t border-border/50">
           <div className="px-6 py-4 text-center">
             <p className="text-xs text-muted-foreground leading-relaxed">

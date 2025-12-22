@@ -5,6 +5,7 @@ export { ActionPanel } from "./ActionPanel";
 export { MetricsGrid } from "./MetricsGrid";
 export { QuickStats } from "./QuickStats";
 export { ProgressBar } from "./ProgressBar";
+export { LogoutButton } from "./LogoutButton";
 
 // Supporting components (keeping useful ones)
 export { Confetti } from "./Confetti";

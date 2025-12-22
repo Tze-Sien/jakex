@@ -1,10 +1,12 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Supabase client instance (initialized lazily)
 let supabaseClient: SupabaseClient | null = null;
 
 /**
- * Get the Supabase client instance.
+ * Get the Supabase client instance for browser/client components.
+ * Uses @supabase/ssr's createBrowserClient which automatically handles cookies.
  * Creates a new client if one doesn't exist.
  */
 export function getSupabaseClient(): SupabaseClient {
@@ -21,20 +23,19 @@ export function getSupabaseClient(): SupabaseClient {
     );
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
   return supabaseClient;
 }
 
 /**
- * Create a new Supabase client with custom options.
- * Use this for server-side operations or when you need different config.
+ * Create a new Supabase browser client with custom options.
+ * Use this when you need a fresh client instance with different config.
  */
 export function createSupabaseClient(
   supabaseUrl: string,
-  supabaseKey: string,
-  options?: Parameters<typeof createClient>[2]
+  supabaseKey: string
 ): SupabaseClient {
-  return createClient(supabaseUrl, supabaseKey, options);
+  return createBrowserClient(supabaseUrl, supabaseKey);
 }
 
 // Re-export types from Supabase
