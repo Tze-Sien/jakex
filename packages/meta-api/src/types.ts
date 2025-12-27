@@ -570,6 +570,102 @@ export interface MetaAd {
 }
 
 /**
+ * Date preset options for insights queries
+ * Based on AdsInsights.DatePreset from facebook-nodejs-business-sdk
+ */
+export enum InsightsDatePreset {
+  TODAY = 'today',
+  YESTERDAY = 'yesterday',
+  THIS_MONTH = 'this_month',
+  LAST_MONTH = 'last_month',
+  THIS_QUARTER = 'this_quarter',
+  MAXIMUM = 'maximum',
+  DATA_MAXIMUM = 'data_maximum',
+  LAST_3D = 'last_3d',
+  LAST_7D = 'last_7d',
+  LAST_14D = 'last_14d',
+  LAST_28D = 'last_28d',
+  LAST_30D = 'last_30d',
+  LAST_90D = 'last_90d',
+  LAST_WEEK_MON_SUN = 'last_week_mon_sun',
+  LAST_WEEK_SUN_SAT = 'last_week_sun_sat',
+  LAST_QUARTER = 'last_quarter',
+  LAST_YEAR = 'last_year',
+  THIS_WEEK_MON_TODAY = 'this_week_mon_today',
+  THIS_WEEK_SUN_TODAY = 'this_week_sun_today',
+  THIS_YEAR = 'this_year'
+}
+
+/**
+ * Insights level - determines the granularity of the data
+ * Based on AdsInsights.Level from facebook-nodejs-business-sdk
+ */
+export enum InsightsLevel {
+  ACCOUNT = 'account',
+  CAMPAIGN = 'campaign',
+  ADSET = 'adset',
+  AD = 'ad'
+}
+
+/**
+ * Time increment for insights breakdown
+ * Based on AdsInsights.TimeIncrement from facebook-nodejs-business-sdk
+ */
+export type InsightsTimeIncrement = 'all_days' | 'monthly' | number; // number represents daily (1-90)
+
+/**
+ * Action attribution windows
+ * Based on AdsInsights.ActionAttributionWindows from facebook-nodejs-business-sdk
+ */
+export enum InsightsActionAttributionWindows {
+  VALUE_1D_CLICK = '1d_click',
+  VALUE_7D_CLICK = '7d_click',
+  VALUE_28D_CLICK = '28d_click',
+  VALUE_1D_VIEW = '1d_view',
+  VALUE_7D_VIEW = '7d_view',
+  VALUE_28D_VIEW = '28d_view',
+  VALUE_DEFAULT = 'default'
+}
+
+/**
+ * Action breakdowns
+ * Based on AdsInsights.ActionBreakdowns from facebook-nodejs-business-sdk
+ */
+export enum InsightsActionBreakdowns {
+  ACTION_CANVAS_COMPONENT_NAME = 'action_canvas_component_name',
+  ACTION_CAROUSEL_CARD_ID = 'action_carousel_card_id',
+  ACTION_CAROUSEL_CARD_NAME = 'action_carousel_card_name',
+  ACTION_DESTINATION = 'action_destination',
+  ACTION_DEVICE = 'action_device',
+  ACTION_REACTION = 'action_reaction',
+  ACTION_TARGET_ID = 'action_target_id',
+  ACTION_TYPE = 'action_type',
+  ACTION_VIDEO_SOUND = 'action_video_sound',
+  ACTION_VIDEO_TYPE = 'action_video_type'
+}
+
+/**
+ * Breakdowns for insights
+ * Based on AdsInsights.Breakdowns from facebook-nodejs-business-sdk
+ */
+export enum InsightsBreakdowns {
+  AGE = 'age',
+  COUNTRY = 'country',
+  DMA = 'dma',
+  GENDER = 'gender',
+  FREQUENCY_VALUE = 'frequency_value',
+  HOURLY_STATS_AGGREGATED_BY_ADVERTISER_TIME_ZONE = 'hourly_stats_aggregated_by_advertiser_time_zone',
+  HOURLY_STATS_AGGREGATED_BY_AUDIENCE_TIME_ZONE = 'hourly_stats_aggregated_by_audience_time_zone',
+  IMPRESSION_DEVICE = 'impression_device',
+  PLACE_PAGE_ID = 'place_page_id',
+  PUBLISHER_PLATFORM = 'publisher_platform',
+  PLATFORM_POSITION = 'platform_position',
+  DEVICE_PLATFORM = 'device_platform',
+  PRODUCT_ID = 'product_id',
+  REGION = 'region'
+}
+
+/**
  * Action/Conversion data in insights
  */
 export interface MetaInsightAction {
@@ -721,6 +817,70 @@ export interface MetaCursor<T> extends Array<T> {
   };
   hasNext?: () => boolean;
   hasPrevious?: () => boolean;
+}
+
+// =============================================================================
+// INSIGHTS QUERY PARAMETERS
+// =============================================================================
+
+/**
+ * Comprehensive insights query parameters
+ * Based on AdsInsights query parameters from facebook-nodejs-business-sdk
+ */
+export interface MetaInsightsParams {
+  // Level of aggregation
+  level?: InsightsLevel;
+
+  // Date parameters (use either date_preset OR time_range)
+  date_preset?: InsightsDatePreset | string;
+  time_range?: {
+    since: string; // 'YYYY-MM-DD'
+    until: string; // 'YYYY-MM-DD'
+  };
+
+  // Time increment
+  time_increment?: InsightsTimeIncrement;
+
+  // Breakdowns
+  breakdowns?: InsightsBreakdowns[] | string[];
+  action_breakdowns?: InsightsActionBreakdowns[] | string[];
+
+  // Action attribution windows
+  action_attribution_windows?: InsightsActionAttributionWindows[] | string[];
+
+  // Action report time (when to attribute the action)
+  action_report_time?: 'impression' | 'conversion' | 'mixed';
+
+  // Fields to return
+  fields?: string[];
+
+  // Filtering
+  filtering?: Array<{
+    field: string;
+    operator: 'EQUAL' | 'NOT_EQUAL' | 'GREATER_THAN' | 'GREATER_THAN_OR_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 'IN' | 'NOT_IN' | 'CONTAIN' | 'NOT_CONTAIN' | 'IN_RANGE' | 'NOT_IN_RANGE';
+    value: string | number | string[] | number[];
+  }>;
+
+  // Sorting
+  sort?: string[]; // e.g., ['spend_descending', 'reach_ascending']
+
+  // Pagination
+  limit?: number;
+  after?: string; // cursor
+  before?: string; // cursor
+
+  // Summary
+  summary?: boolean;
+  summary_action_breakdowns?: string[];
+
+  // Use account currency
+  use_account_attribution_setting?: boolean;
+
+  // Default summary (for breakdown queries)
+  default_summary?: boolean;
+
+  // Use unified attribution setting
+  use_unified_attribution_setting?: boolean;
 }
 
 // =============================================================================

@@ -209,6 +209,32 @@ export const insights = pgTable(
     timeRange: text("time_range").notNull(),
     dateStart: date("date_start").notNull(),
     dateEnd: date("date_end").notNull(),
+
+    // Snapshot: Entity metadata at time of report
+    entityName: text("entity_name"),
+    entityStatus: text("entity_status"),
+
+    // Snapshot: Campaign-specific fields
+    campaignObjective: text("campaign_objective"),
+    campaignDailyBudget: bigint("campaign_daily_budget", { mode: "number" }),
+    campaignLifetimeBudget: bigint("campaign_lifetime_budget", {
+      mode: "number",
+    }),
+
+    // Snapshot: AdSet-specific fields
+    adSetOptimizationGoal: text("ad_set_optimization_goal"),
+    adSetBidStrategy: text("ad_set_bid_strategy"),
+    adSetDailyBudget: bigint("ad_set_daily_budget", { mode: "number" }),
+    adSetLifetimeBudget: bigint("ad_set_lifetime_budget", { mode: "number" }),
+    adSetTargeting: jsonb("ad_set_targeting"),
+
+    // Snapshot: Ad-specific fields
+    adCreativeType: text("ad_creative_type"),
+    adHeadline: text("ad_headline"),
+    adBodyText: text("ad_body_text"),
+    adCallToAction: text("ad_call_to_action"),
+
+    // Performance metrics
     spend: bigint("spend", { mode: "number" }).notNull().default(0),
     impressions: bigint("impressions", { mode: "number" })
       .notNull()
@@ -224,15 +250,21 @@ export const insights = pgTable(
     roas: decimal("roas", { precision: 10, scale: 4 }),
   },
   (t) => [
-    uniqueIndex(
-      "insights_report_id_campaign_id_time_range_idx"
-    ).on(t.reportId, t.campaignId, t.timeRange),
-    uniqueIndex(
-      "insights_report_id_ad_set_id_time_range_idx"
-    ).on(t.reportId, t.adSetId, t.timeRange),
-    uniqueIndex(
-      "insights_report_id_ad_id_time_range_idx"
-    ).on(t.reportId, t.adId, t.timeRange),
+    uniqueIndex("insights_report_id_campaign_id_time_range_idx").on(
+      t.reportId,
+      t.campaignId,
+      t.timeRange
+    ),
+    uniqueIndex("insights_report_id_ad_set_id_time_range_idx").on(
+      t.reportId,
+      t.adSetId,
+      t.timeRange
+    ),
+    uniqueIndex("insights_report_id_ad_id_time_range_idx").on(
+      t.reportId,
+      t.adId,
+      t.timeRange
+    ),
   ]
 );
 

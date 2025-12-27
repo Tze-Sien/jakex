@@ -155,62 +155,238 @@ export function generateMockAd(accountId: string, campaignId: string, adSetId: s
 }
 
 /**
+ * Helper to format date as YYYY-MM-DD
+ */
+function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0]!;
+}
+
+/**
+ * Calculate date range based on date preset
+ */
+function getDateRangeFromPreset(preset: string): { dateStart: string; dateStop: string } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dateStop = formatDate(today);
+  let dateStart = dateStop;
+
+  switch (preset) {
+    case 'today':
+      dateStart = dateStop;
+      break;
+    case 'yesterday':
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      dateStart = formatDate(yesterday);
+      break;
+    case 'last_3d':
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      dateStart = formatDate(threeDaysAgo);
+      break;
+    case 'last_7d':
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      dateStart = formatDate(sevenDaysAgo);
+      break;
+    case 'last_14d':
+      const fourteenDaysAgo = new Date(today);
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      dateStart = formatDate(fourteenDaysAgo);
+      break;
+    case 'last_28d':
+    case 'last_30d':
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      dateStart = formatDate(thirtyDaysAgo);
+      break;
+    case 'last_90d':
+      const ninetyDaysAgo = new Date(today);
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      dateStart = formatDate(ninetyDaysAgo);
+      break;
+    case 'this_month':
+      dateStart = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+      break;
+    case 'last_month':
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { dateStart: formatDate(lastMonthStart), dateStop: formatDate(lastMonthEnd) };
+    default:
+      // Default to last 7 days
+      const defaultStart = new Date(today);
+      defaultStart.setDate(defaultStart.getDate() - 7);
+      dateStart = formatDate(defaultStart);
+  }
+
+  return { dateStart, dateStop };
+}
+
+/**
  * Generate random mock insights for an entity
+ * Enhanced with more realistic metrics and comprehensive data
  */
 export function generateMockInsights(
   entityId: string,
   accountId: string,
   level: 'account' | 'campaign' | 'adset' | 'ad',
-  dateStart: string | undefined = undefined,
-  dateStop: string | undefined = undefined
+  datePreset: string = 'last_7d',
+  timeRange?: { since: string; until: string },
+  entityName?: string
 ): MetaInsights {
-  const spend = faker.number.float({ min: 10, max: 5000, fractionDigits: 2 });
-  const impressions = faker.number.int({ min: 1000, max: 500000 });
-  const reach = faker.number.int({ min: Math.floor(impressions * 0.6), max: Math.floor(impressions * 0.95) });
-  const clicks = faker.number.int({ min: 10, max: Math.floor(impressions * 0.1) });
-  const cpc = (spend / clicks).toFixed(2);
-  const cpm = ((spend / impressions) * 1000).toFixed(2);
-  const cpp = ((spend / reach) * 1000).toFixed(2);
-  const ctr = ((clicks / impressions) * 100).toFixed(2);
+  // Calculate date range
+  const { dateStart, dateStop } = timeRange
+    ? { dateStart: timeRange.since, dateStop: timeRange.until }
+    : getDateRangeFromPreset(datePreset);
 
-  // Generate some actions (conversions)
-  const hasActions = faker.datatype.boolean({ probability: 0.7 });
-  const actions = hasActions ? [
+  // Generate realistic metrics based on level
+  const baseBudget = level === 'account' ? 10000 : level === 'campaign' ? 5000 : level === 'adset' ? 2000 : 500;
+  const spend = faker.number.float({ min: baseBudget * 0.3, max: baseBudget * 0.9, fractionDigits: 2 });
+
+  // Impressions scale with spend and level
+  const impressionMultiplier = level === 'ad' ? 100 : level === 'adset' ? 500 : level === 'campaign' ? 2000 : 5000;
+  const impressions = faker.number.int({ min: Math.floor(spend * impressionMultiplier * 0.8), max: Math.floor(spend * impressionMultiplier * 1.2) });
+
+  // Reach is typically 60-95% of impressions
+  const reach = faker.number.int({ min: Math.floor(impressions * 0.6), max: Math.floor(impressions * 0.95) });
+
+  // Frequency = impressions / reach
+  const frequency = (impressions / reach).toFixed(2);
+
+  // CTR varies by level (ads typically have higher CTR)
+  const ctrMultiplier = level === 'ad' ? 0.05 : level === 'adset' ? 0.03 : 0.02;
+  const clicks = faker.number.int({ min: Math.floor(impressions * ctrMultiplier * 0.5), max: Math.floor(impressions * ctrMultiplier * 1.5) });
+
+  // Calculate cost metrics
+  const cpc = clicks > 0 ? (spend / clicks).toFixed(2) : '0.00';
+  const cpm = impressions > 0 ? ((spend / impressions) * 1000).toFixed(2) : '0.00';
+  const cpp = reach > 0 ? ((spend / reach) * 1000).toFixed(2) : '0.00';
+  const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(4) : '0.0000';
+
+  // Generate conversion actions with attribution windows
+  const hasConversions = faker.datatype.boolean({ probability: 0.7 });
+  const purchases = hasConversions ? faker.number.int({ min: 1, max: Math.floor(clicks * 0.05) }) : 0;
+  const landingPageViews = faker.number.int({ min: Math.floor(clicks * 0.3), max: Math.floor(clicks * 0.8) });
+  const addToCarts = faker.number.int({ min: Math.floor(purchases * 1.5), max: Math.floor(clicks * 0.3) });
+  const initiateCheckouts = faker.number.int({ min: purchases, max: Math.floor(addToCarts * 0.6) });
+
+  const actions = [
     {
-      action_type: 'purchase',
-      value: faker.number.int({ min: 0, max: 50 }).toString()
+      action_type: 'link_click',
+      value: clicks.toString(),
+      '1d_click': Math.floor(clicks * 0.4).toString(),
+      '7d_click': Math.floor(clicks * 0.9).toString(),
+      '28d_click': clicks.toString()
     },
     {
       action_type: 'landing_page_view',
-      value: faker.number.int({ min: 10, max: Math.floor(clicks * 0.8) }).toString()
+      value: landingPageViews.toString(),
+      '1d_click': Math.floor(landingPageViews * 0.4).toString(),
+      '7d_click': Math.floor(landingPageViews * 0.9).toString()
     },
     {
-      action_type: 'add_to_cart',
-      value: faker.number.int({ min: 5, max: Math.floor(clicks * 0.5) }).toString()
+      action_type: 'offsite_conversion.fb_pixel_view_content',
+      value: faker.number.int({ min: Math.floor(landingPageViews * 0.5), max: landingPageViews }).toString()
     }
-  ] : [];
+  ];
+
+  // Add conversion actions if applicable
+  if (hasConversions) {
+    actions.push(
+      {
+        action_type: 'offsite_conversion.fb_pixel_add_to_cart',
+        value: addToCarts.toString(),
+        '1d_click': Math.floor(addToCarts * 0.4).toString(),
+        '7d_click': Math.floor(addToCarts * 0.85).toString()
+      },
+      {
+        action_type: 'offsite_conversion.fb_pixel_initiate_checkout',
+        value: initiateCheckouts.toString(),
+        '1d_click': Math.floor(initiateCheckouts * 0.4).toString(),
+        '7d_click': Math.floor(initiateCheckouts * 0.85).toString()
+      },
+      {
+        action_type: 'offsite_conversion.fb_pixel_purchase',
+        value: purchases.toString(),
+        '1d_click': Math.floor(purchases * 0.3).toString(),
+        '7d_click': Math.floor(purchases * 0.8).toString(),
+        '28d_click': purchases.toString()
+      }
+    );
+  }
+
+  // Generate action values (revenue)
+  const action_values = hasConversions ? [
+    {
+      action_type: 'offsite_conversion.fb_pixel_purchase',
+      value: (purchases * faker.number.float({ min: 25, max: 150, fractionDigits: 2 })).toFixed(2),
+      '1d_click': (Math.floor(purchases * 0.3) * faker.number.float({ min: 25, max: 150, fractionDigits: 2 })).toFixed(2),
+      '7d_click': (Math.floor(purchases * 0.8) * faker.number.float({ min: 25, max: 150, fractionDigits: 2 })).toFixed(2)
+    }
+  ] : undefined;
+
+  // Calculate cost per action type
+  const cost_per_action_type = [
+    {
+      action_type: 'link_click',
+      value: cpc
+    },
+    {
+      action_type: 'landing_page_view',
+      value: landingPageViews > 0 ? (spend / landingPageViews).toFixed(2) : '0.00'
+    }
+  ];
+
+  if (hasConversions) {
+    cost_per_action_type.push(
+      {
+        action_type: 'offsite_conversion.fb_pixel_add_to_cart',
+        value: addToCarts > 0 ? (spend / addToCarts).toFixed(2) : '0.00'
+      },
+      {
+        action_type: 'offsite_conversion.fb_pixel_purchase',
+        value: purchases > 0 ? (spend / purchases).toFixed(2) : '0.00'
+      }
+    );
+  }
 
   const insights: MetaInsights = {
     account_id: accountId.replace('act_', ''),
     spend: spend.toFixed(2),
     impressions: impressions.toString(),
     clicks: clicks.toString(),
+    reach: reach.toString(),
+    frequency,
     cpc,
     cpm,
     cpp,
     ctr,
-    date_start: (dateStart !== undefined ? dateStart : faker.date.recent({ days: 7 }).toISOString().split('T')[0]) as string,
-    date_stop: (dateStop !== undefined ? dateStop : new Date().toISOString().split('T')[0]) as string,
-    actions
+    date_start: dateStart,
+    date_stop: dateStop,
+    actions,
+    action_values,
+    cost_per_action_type
   };
 
-  // Add the appropriate ID based on level
+  // Add level-specific fields
   if (level === 'campaign') {
     insights.campaign_id = entityId;
+    insights.campaign_name = entityName || `Campaign ${entityId}`;
   } else if (level === 'adset') {
     insights.adset_id = entityId;
+    insights.adset_name = entityName || `AdSet ${entityId}`;
   } else if (level === 'ad') {
     insights.ad_id = entityId;
+    insights.ad_name = entityName || `Ad ${entityId}`;
+  } else {
+    insights.account_name = entityName || `Account ${accountId}`;
+  }
+
+  // Add quality rankings for ads
+  if (level === 'ad') {
+    insights.quality_ranking = faker.helpers.arrayElement(['ABOVE_AVERAGE', 'AVERAGE', 'BELOW_AVERAGE']);
+    insights.engagement_rate_ranking = faker.helpers.arrayElement(['ABOVE_AVERAGE', 'AVERAGE', 'BELOW_AVERAGE']);
+    insights.conversion_rate_ranking = faker.helpers.arrayElement(['ABOVE_AVERAGE', 'AVERAGE', 'BELOW_AVERAGE']);
   }
 
   return insights;
