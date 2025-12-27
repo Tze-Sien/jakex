@@ -235,3 +235,32 @@ export const insights = pgTable(
     ).on(t.reportId, t.adId, t.timeRange),
   ]
 );
+
+export const syncJobs = pgTable(
+  "sync_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    metaConnectionId: uuid("meta_connection_id")
+      .notNull()
+      .references(() => metaConnections.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // 'full' | 'incremental' | 'manual'
+    entityType: text("entity_type"), // 'adAccounts' | 'campaigns' | 'adSets' | 'ads' | 'insights'
+    adAccountId: text("ad_account_id"), // META ad account ID being synced
+    status: text("status").notNull().default("pending"), // 'pending' | 'running' | 'completed' | 'failed'
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    totalSynced: integer("total_synced").default(0),
+    totalErrors: integer("total_errors").default(0),
+    errorMessage: text("error_message"),
+    errorDetails: jsonb("error_details"), // Array of error messages
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("sync_jobs_connection_id_idx").on(t.metaConnectionId),
+    index("sync_jobs_status_idx").on(t.status),
+    index("sync_jobs_created_at_idx").on(t.createdAt),
+  ]
+);
