@@ -4,11 +4,13 @@
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "dependencies": {
+        "facebook-nodejs-business-sdk": "^24.0.1",
         "zod": "^3.22.4"
     },
     "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
         "@repo/eslint-config": "workspace:*",
+        "@repo/typescript-config": "workspace:*",
+        "@types/facebook-nodejs-business-sdk": "^23.0.0",
         "typescript": "^5.3.3"
     }
 }

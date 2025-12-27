@@ -1,69 +1,312 @@
-import { MetaAdAccount, MetaCampaign, MetaAdSet, MetaAd, MetaInsights } from './types';
+import { faker } from '@faker-js/faker';
+import {
+  MetaAdAccount,
+  MetaCampaign,
+  MetaAdSet,
+  MetaAd,
+  MetaInsights,
+  CampaignObjective,
+  CampaignStatus,
+  CampaignBidStrategy,
+  AdSetStatus,
+  AdSetOptimizationGoal,
+  AdSetBillingEvent,
+  AdStatus,
+  AdAccountStatus
+} from './types';
 
-// Hardcoded Account ID for consistency: act_123456789
+// ============================
+// Dynamic Mock Data Generators
+// ============================
 
-// 1. Ad Accounts
+/**
+ * Generate a random mock ad account
+ */
+export function generateMockAdAccount(): MetaAdAccount {
+  const accountId = faker.number.int({ min: 100000000, max: 999999999 }).toString();
+  const amountSpent = faker.number.float({ min: 1000, max: 50000, fractionDigits: 2 });
+
+  return {
+    id: `act_${accountId}`,
+    account_id: accountId,
+    name: `${faker.company.name()} Ads Account`,
+    currency: faker.helpers.arrayElement(['USD', 'EUR', 'GBP', 'CAD']),
+    timezone_name: faker.helpers.arrayElement([
+      'America/New_York',
+      'America/Los_Angeles',
+      'Europe/London',
+      'America/Chicago'
+    ]),
+    account_status: faker.helpers.arrayElement([AdAccountStatus.ACTIVE, AdAccountStatus.DISABLED]),
+    amount_spent: amountSpent.toFixed(2),
+    balance: '0',
+    created_time: faker.date.past({ years: 2 }).toISOString()
+  };
+}
+
+/**
+ * Generate a random mock campaign
+ */
+export function generateMockCampaign(accountId: string): MetaCampaign {
+  const campaignId = faker.number.int({ min: 10000000000, max: 99999999999 }).toString();
+  const dailyBudget = faker.number.int({ min: 1000, max: 50000 }); // $10-$500 in cents
+
+  const campaign: MetaCampaign = {
+    id: campaignId,
+    account_id: accountId.replace('act_', ''),
+    name: `${faker.helpers.arrayElement(['Sales', 'Awareness', 'Traffic', 'Leads'])} - ${faker.commerce.productName()}`,
+    status: faker.helpers.arrayElement([
+      CampaignStatus.ACTIVE,
+      CampaignStatus.PAUSED,
+      CampaignStatus.ARCHIVED
+    ]),
+    objective: faker.helpers.arrayElement([
+      CampaignObjective.OUTCOME_SALES,
+      CampaignObjective.OUTCOME_AWARENESS,
+      CampaignObjective.OUTCOME_TRAFFIC,
+      CampaignObjective.OUTCOME_ENGAGEMENT,
+      CampaignObjective.OUTCOME_LEADS
+    ]),
+    start_time: faker.date.past({ years: 1 }).toISOString()
+  };
+
+  // Randomly assign daily_budget or lifetime_budget
+  if (faker.datatype.boolean()) {
+    campaign.daily_budget = dailyBudget.toString();
+  } else {
+    campaign.lifetime_budget = (dailyBudget * 30).toString();
+    campaign.stop_time = faker.date.future({ years: 1 }).toISOString();
+  }
+
+  return campaign;
+}
+
+/**
+ * Generate a random mock ad set
+ */
+export function generateMockAdSet(accountId: string, campaignId: string): MetaAdSet {
+  const adSetId = `${campaignId}_${faker.number.int({ min: 1, max: 99 })}`;
+  const dailyBudget = faker.number.int({ min: 500, max: 25000 }); // $5-$250
+
+  return {
+    id: adSetId,
+    account_id: accountId.replace('act_', ''),
+    campaign_id: campaignId,
+    name: faker.helpers.arrayElement([
+      `Broad - ${faker.location.countryCode()} - ${faker.number.int({ min: 18, max: 65 })}-${faker.number.int({ min: 18, max: 65 })}`,
+      `Retargeting - ${faker.commerce.department()}`,
+      `Lookalike ${faker.number.int({ min: 1, max: 10 })}% - ${faker.word.noun()}`,
+      `Interest - ${faker.commerce.productAdjective()}`
+    ]),
+    status: faker.helpers.arrayElement([AdSetStatus.ACTIVE, AdSetStatus.PAUSED]),
+    optimization_goal: faker.helpers.arrayElement([
+      AdSetOptimizationGoal.OFFSITE_CONVERSIONS,
+      AdSetOptimizationGoal.LINK_CLICKS,
+      AdSetOptimizationGoal.IMPRESSIONS,
+      AdSetOptimizationGoal.REACH,
+      AdSetOptimizationGoal.LANDING_PAGE_VIEWS
+    ]),
+    billing_event: AdSetBillingEvent.IMPRESSIONS,
+    bid_strategy: faker.helpers.arrayElement([
+      CampaignBidStrategy.LOWEST_COST_WITHOUT_CAP,
+      CampaignBidStrategy.COST_CAP,
+      CampaignBidStrategy.LOWEST_COST_WITH_BID_CAP
+    ]),
+    daily_budget: dailyBudget.toString(),
+    targeting: {
+      geo_locations: {
+        countries: [faker.location.countryCode(), faker.location.countryCode()]
+      },
+      age_min: faker.number.int({ min: 18, max: 45 }),
+      age_max: faker.number.int({ min: 46, max: 65 }),
+      publisher_platforms: faker.helpers.arrayElements(['facebook', 'instagram', 'audience_network', 'messenger'], { min: 1, max: 3 })
+    },
+    start_time: faker.date.past({ years: 1 }).toISOString()
+  };
+}
+
+/**
+ * Generate a random mock ad
+ */
+export function generateMockAd(accountId: string, campaignId: string, adSetId: string): MetaAd {
+  const adId = `${adSetId}_${faker.number.int({ min: 1, max: 99 })}`;
+  const creativeId = faker.number.int({ min: 100000, max: 999999 }).toString();
+
+  const adFormats = ['Video', 'Image', 'Carousel', 'Collection', 'Stories'];
+  const ctaTypes = ['SHOP_NOW', 'LEARN_MORE', 'SIGN_UP', 'DOWNLOAD', 'GET_QUOTE', 'APPLY_NOW'] as const;
+
+  return {
+    id: adId,
+    account_id: accountId.replace('act_', ''),
+    campaign_id: campaignId,
+    adset_id: adSetId,
+    name: `${faker.helpers.arrayElement(adFormats)} - ${faker.commerce.productAdjective()} ${faker.word.noun()}`,
+    status: faker.helpers.arrayElement([AdStatus.ACTIVE, AdStatus.PAUSED]),
+    creative: {
+      id: creativeId,
+      title: faker.company.catchPhrase(),
+      body: faker.lorem.sentence(),
+      call_to_action_type: faker.helpers.arrayElement(ctaTypes),
+      image_url: `https://picsum.photos/seed/${creativeId}/1200/630`
+    }
+  };
+}
+
+/**
+ * Generate random mock insights for an entity
+ */
+export function generateMockInsights(
+  entityId: string,
+  accountId: string,
+  level: 'account' | 'campaign' | 'adset' | 'ad',
+  dateStart: string | undefined = undefined,
+  dateStop: string | undefined = undefined
+): MetaInsights {
+  const spend = faker.number.float({ min: 10, max: 5000, fractionDigits: 2 });
+  const impressions = faker.number.int({ min: 1000, max: 500000 });
+  const reach = faker.number.int({ min: Math.floor(impressions * 0.6), max: Math.floor(impressions * 0.95) });
+  const clicks = faker.number.int({ min: 10, max: Math.floor(impressions * 0.1) });
+  const cpc = (spend / clicks).toFixed(2);
+  const cpm = ((spend / impressions) * 1000).toFixed(2);
+  const cpp = ((spend / reach) * 1000).toFixed(2);
+  const ctr = ((clicks / impressions) * 100).toFixed(2);
+
+  // Generate some actions (conversions)
+  const hasActions = faker.datatype.boolean({ probability: 0.7 });
+  const actions = hasActions ? [
+    {
+      action_type: 'purchase',
+      value: faker.number.int({ min: 0, max: 50 }).toString()
+    },
+    {
+      action_type: 'landing_page_view',
+      value: faker.number.int({ min: 10, max: Math.floor(clicks * 0.8) }).toString()
+    },
+    {
+      action_type: 'add_to_cart',
+      value: faker.number.int({ min: 5, max: Math.floor(clicks * 0.5) }).toString()
+    }
+  ] : [];
+
+  const insights: MetaInsights = {
+    account_id: accountId.replace('act_', ''),
+    spend: spend.toFixed(2),
+    impressions: impressions.toString(),
+    clicks: clicks.toString(),
+    cpc,
+    cpm,
+    cpp,
+    ctr,
+    date_start: (dateStart !== undefined ? dateStart : faker.date.recent({ days: 7 }).toISOString().split('T')[0]) as string,
+    date_stop: (dateStop !== undefined ? dateStop : new Date().toISOString().split('T')[0]) as string,
+    actions
+  };
+
+  // Add the appropriate ID based on level
+  if (level === 'campaign') {
+    insights.campaign_id = entityId;
+  } else if (level === 'adset') {
+    insights.adset_id = entityId;
+  } else if (level === 'ad') {
+    insights.ad_id = entityId;
+  }
+
+  return insights;
+}
+
+// ============================
+// Generate Mock Data Sets
+// ============================
+
+/**
+ * Generate multiple ad accounts (3-5)
+ */
+export function generateMockAdAccounts(): MetaAdAccount[] {
+  const count = faker.number.int({ min: 3, max: 5 });
+  return Array.from({ length: count }, () => generateMockAdAccount());
+}
+
+/**
+ * Generate multiple campaigns for an account (5-20)
+ */
+export function generateMockCampaigns(accountId: string, count?: number): MetaCampaign[] {
+  const numCampaigns = count || faker.number.int({ min: 5, max: 20 });
+  return Array.from({ length: numCampaigns }, () => generateMockCampaign(accountId));
+}
+
+/**
+ * Generate multiple ad sets for a campaign (2-8)
+ */
+export function generateMockAdSets(accountId: string, campaignId: string, count?: number): MetaAdSet[] {
+  const numAdSets = count || faker.number.int({ min: 2, max: 8 });
+  return Array.from({ length: numAdSets }, () => generateMockAdSet(accountId, campaignId));
+}
+
+/**
+ * Generate multiple ads for an ad set (1-5)
+ */
+export function generateMockAds(accountId: string, campaignId: string, adSetId: string, count?: number): MetaAd[] {
+  const numAds = count || faker.number.int({ min: 1, max: 5 });
+  return Array.from({ length: numAds }, () => generateMockAd(accountId, campaignId, adSetId));
+}
+
+// ============================
+// Static Mock Data (for backwards compatibility)
+// ============================
+
 export const MOCK_AD_ACCOUNT: MetaAdAccount = {
   id: 'act_123456789',
   account_id: '123456789',
   name: 'JakeX Demo Account',
   currency: 'USD',
   timezone_name: 'America/New_York',
-  account_status: 1, // Active
+  account_status: AdAccountStatus.ACTIVE,
   amount_spent: '15400.50',
   balance: '0',
   created_time: '2023-01-01T00:00:00+0000'
 };
-
-// 2. Campaigns
-// We will simulate 3 campaigns:
-// - C1: High performing Sales (Good ROAS)
-// - C2: Low performing Awareness (High CPM, low CTR)
-// - C3: Average Traffic (Mid performance)
 
 export const MOCK_CAMPAIGNS: MetaCampaign[] = [
   {
     id: '12020202020',
     account_id: '123456789',
     name: 'Sales - Summer Promo - 2024',
-    status: 'ACTIVE',
-    objective: 'OUTCOME_SALES',
-    daily_budget: '5000', // $50.00
+    status: CampaignStatus.ACTIVE,
+    objective: CampaignObjective.OUTCOME_SALES,
+    daily_budget: '5000',
     start_time: '2024-06-01T08:00:00+0000'
   },
   {
     id: '12020202021',
     account_id: '123456789',
     name: 'Awareness - Brand Launch',
-    status: 'ACTIVE',
-    objective: 'OUTCOME_AWARENESS',
-    daily_budget: '2000', // $20.00
+    status: CampaignStatus.ACTIVE,
+    objective: CampaignObjective.OUTCOME_AWARENESS,
+    daily_budget: '2000',
     start_time: '2024-05-15T08:00:00+0000'
   },
   {
     id: '12020202022',
     account_id: '123456789',
     name: 'Traffic - Blog Content',
-    status: 'PAUSED',
-    objective: 'OUTCOME_TRAFFIC',
-    lifetime_budget: '10000', // $100.00
+    status: CampaignStatus.PAUSED,
+    objective: CampaignObjective.OUTCOME_TRAFFIC,
+    lifetime_budget: '10000',
     start_time: '2024-04-01T08:00:00+0000',
     stop_time: '2024-04-30T23:59:59+0000'
   }
 ];
 
-// 3. Ad Sets
 export const MOCK_AD_SETS: MetaAdSet[] = [
-  // C1 Ad Sets
   {
     id: '12020202020_1',
     account_id: '123456789',
     campaign_id: '12020202020',
     name: 'Broad - US - 25-45',
-    status: 'ACTIVE',
-    optimization_goal: 'OFFSITE_CONVERSIONS',
-    billing_event: 'IMPRESSIONS',
-    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    status: AdSetStatus.ACTIVE,
+    optimization_goal: AdSetOptimizationGoal.OFFSITE_CONVERSIONS,
+    billing_event: AdSetBillingEvent.IMPRESSIONS,
+    bid_strategy: CampaignBidStrategy.LOWEST_COST_WITHOUT_CAP,
     daily_budget: '2500',
     targeting: {
       geo_locations: { countries: ['US'] },
@@ -78,41 +321,38 @@ export const MOCK_AD_SETS: MetaAdSet[] = [
     account_id: '123456789',
     campaign_id: '12020202020',
     name: 'Retargeting - Website Visitors',
-    status: 'ACTIVE',
-    optimization_goal: 'OFFSITE_CONVERSIONS',
-    billing_event: 'IMPRESSIONS',
-    bid_strategy: 'COST_CAP',
+    status: AdSetStatus.ACTIVE,
+    optimization_goal: AdSetOptimizationGoal.OFFSITE_CONVERSIONS,
+    billing_event: AdSetBillingEvent.IMPRESSIONS,
+    bid_strategy: CampaignBidStrategy.COST_CAP,
     daily_budget: '2500',
     targeting: {
       geo_locations: { countries: ['US'] }
     },
     start_time: '2024-06-01T08:00:00+0000'
   },
-  // C2 Ad Set
   {
     id: '12020202021_1',
     account_id: '123456789',
     campaign_id: '12020202021',
     name: 'Lookalike 1% - Purchasers',
-    status: 'ACTIVE',
-    optimization_goal: 'IMPRESSIONS',
-    billing_event: 'IMPRESSIONS',
-    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    status: AdSetStatus.ACTIVE,
+    optimization_goal: AdSetOptimizationGoal.IMPRESSIONS,
+    billing_event: AdSetBillingEvent.IMPRESSIONS,
+    bid_strategy: CampaignBidStrategy.LOWEST_COST_WITHOUT_CAP,
     daily_budget: '2000',
     start_time: '2024-05-15T08:00:00+0000'
   }
 ];
 
-// 4. Ads
 export const MOCK_ADS: MetaAd[] = [
-  // C1 Ad Set 1 Ads
   {
     id: '12020202020_1_1',
     account_id: '123456789',
     campaign_id: '12020202020',
     adset_id: '12020202020_1',
     name: 'Video - Product Use Case',
-    status: 'ACTIVE',
+    status: AdStatus.ACTIVE,
     creative: {
       id: '999111',
       title: 'Solves your problem instantly',
@@ -127,7 +367,7 @@ export const MOCK_ADS: MetaAd[] = [
     campaign_id: '12020202020',
     adset_id: '12020202020_1',
     name: 'Image - Lifestyle Shot',
-    status: 'ACTIVE',
+    status: AdStatus.ACTIVE,
     creative: {
       id: '999112',
       title: 'Upgrade your workflow',
@@ -136,14 +376,13 @@ export const MOCK_ADS: MetaAd[] = [
       image_url: 'https://placeholder.com/lifestyle.jpg'
     }
   },
-  // C1 Ad Set 2 Ads (Retargeting)
   {
     id: '12020202020_2_1',
     account_id: '123456789',
     campaign_id: '12020202020',
     adset_id: '12020202020_2',
     name: 'Carousel - Testimonial',
-    status: 'PAUSED', // Underperforming
+    status: AdStatus.PAUSED,
     creative: {
       id: '999113',
       title: 'What they say',
@@ -153,10 +392,7 @@ export const MOCK_ADS: MetaAd[] = [
   }
 ];
 
-// 5. Insights (Simulating "Last 7 Days" or "Today")
-// We will key these by entity ID for easy retrieval in the mock client
 export const MOCK_INSIGHTS_MAP: Record<string, MetaInsights> = {
-  // Campaign 1: Good Performance
   '12020202020': {
     account_id: '123456789',
     campaign_id: '12020202020',
@@ -165,27 +401,27 @@ export const MOCK_INSIGHTS_MAP: Record<string, MetaInsights> = {
     clicks: '450',
     cpc: '0.78',
     cpm: '23.36',
+    cpp: '30.50',
     ctr: '3.00',
     date_start: '2024-06-10',
     date_stop: '2024-06-17',
     actions: [
       { action_type: 'purchase', value: '12' },
       { action_type: 'landing_page_view', value: '300' }
-    ] // High ROAS implied
+    ]
   },
-  
-  // Campaign 2: Bad Performance (High spend, no sales)
   '12020202021': {
     account_id: '123456789',
     campaign_id: '12020202021',
     spend: '140.00',
-    impressions: '50000', // Cheap impressions
-    clicks: '100', // Low clicks
+    impressions: '50000',
+    clicks: '100',
     cpc: '1.40',
     cpm: '2.80',
-    ctr: '0.20', // Terrible CTR
+    cpp: '3.50',
+    ctr: '0.20',
     date_start: '2024-06-10',
     date_stop: '2024-06-17',
-    actions: [] // No conversions
+    actions: []
   }
 };
