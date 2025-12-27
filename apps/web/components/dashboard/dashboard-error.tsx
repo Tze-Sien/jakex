@@ -35,10 +35,13 @@ export function DashboardError({ error, reset }: DashboardErrorProps) {
             Try Again
           </Button>
 
-          <Button variant="outline" size="lg" className="w-full" asChild>
-            <a href="/authorize-meta">
-              Check Connection
-            </a>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => window.location.href = '/authorize-meta'}
+          >
+            Check Connection
           </Button>
         </div>
 

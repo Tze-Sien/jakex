@@ -31,3 +31,8 @@ export {
   desc,
   sql,
 } from "drizzle-orm";
+
+// Export default db instance for convenience
+import { getDb } from "./client";
+export const db = getDb().db;
+export const client = getDb().client;

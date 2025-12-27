@@ -19,7 +19,6 @@ export class RealMetaAdsClient {
   constructor(accessToken: string) {
     this.accessToken = accessToken;
     FacebookAdsApi.init(this.accessToken);
-    console.log('✅ RealMetaAdsClient initialized - using Meta Graph API');
   }
 
   async getAdAccounts(): Promise<MetaAdAccount[]> {

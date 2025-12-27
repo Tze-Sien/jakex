@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { AdAccount, Campaign, AdSet, Ad } from "@repo/database/schema";
 
 type ViewLevel = "accounts" | "campaigns" | "adSets" | "ads";
 
@@ -13,10 +14,10 @@ interface Breadcrumb {
 }
 
 interface DataTableProps {
-  accounts: any[];
-  campaigns: any[];
-  adSets: any[];
-  ads: any[];
+  accounts: AdAccount[];
+  campaigns: Campaign[];
+  adSets: AdSet[];
+  ads: Ad[];
 }
 
 export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) {
@@ -78,11 +79,11 @@ export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) 
       case "accounts":
         return accounts;
       case "campaigns":
-        return campaigns.filter((c) => c.account_id === selectedAccountId);
+        return campaigns.filter((c) => c.adAccountId === selectedAccountId);
       case "adSets":
-        return adSets.filter((a) => a.campaign_id === selectedCampaignId);
+        return adSets.filter((a) => a.campaignId === selectedCampaignId);
       case "ads":
-        return ads.filter((a) => a.adset_id === selectedAdSetId);
+        return ads.filter((a) => a.adSetId === selectedAdSetId);
       default:
         return [];
     }
@@ -151,7 +152,7 @@ export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) 
             <td className="p-4 text-sm">{item.currency || "USD"}</td>
             <td className="p-4">
               <span className="inline-flex px-2 py-1 rounded-md bg-green-500/10 text-green-600 text-xs font-medium">
-                {item.status || "ACTIVE"}
+                {item.accountStatus || "ACTIVE"}
               </span>
             </td>
             <td className="p-4 text-right">
@@ -196,7 +197,7 @@ export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) 
           <tr key={item.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
             <td className="p-4 text-sm font-mono">{item.id}</td>
             <td className="p-4 text-sm font-medium">{item.name || "Unnamed Ad Set"}</td>
-            <td className="p-4 text-sm">{item.optimization_goal || "OFFSITE_CONVERSIONS"}</td>
+            <td className="p-4 text-sm">{item.optimizationGoal || "OFFSITE_CONVERSIONS"}</td>
             <td className="p-4">
               <span className="inline-flex px-2 py-1 rounded-md bg-purple-500/10 text-purple-600 text-xs font-medium">
                 {item.status || "ACTIVE"}
@@ -220,7 +221,7 @@ export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) 
           <tr key={item.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
             <td className="p-4 text-sm font-mono">{item.id}</td>
             <td className="p-4 text-sm font-medium">{item.name || "Unnamed Ad"}</td>
-            <td className="p-4 text-sm">{item.creative?.title || "No title"}</td>
+            <td className="p-4 text-sm">{item.headline || "No headline"}</td>
             <td className="p-4">
               <span className="inline-flex px-2 py-1 rounded-md bg-orange-500/10 text-orange-600 text-xs font-medium">
                 {item.status || "ACTIVE"}
@@ -228,8 +229,8 @@ export function DataTable({ accounts, campaigns, adSets, ads }: DataTableProps) 
             </td>
             <td className="p-4 text-right text-sm">
               <div className="flex flex-col items-end gap-1">
-                <span className="text-muted-foreground">Spend: ${item.insights?.spend || "0"}</span>
-                <span className="text-muted-foreground">ROAS: {item.insights?.roas || "0"}x</span>
+                <span className="text-muted-foreground">Creative: {item.creativeType || "N/A"}</span>
+                <span className="text-muted-foreground">CTA: {item.callToAction || "N/A"}</span>
               </div>
             </td>
           </tr>

@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().notNull(),
@@ -296,3 +297,36 @@ export const syncJobs = pgTable(
     index("sync_jobs_created_at_idx").on(t.createdAt),
   ]
 );
+
+// Relations
+export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
+  adAccount: one(adAccounts, {
+    fields: [campaigns.adAccountId],
+    references: [adAccounts.id],
+  }),
+  adSets: many(adSets),
+}));
+
+export const adSetsRelations = relations(adSets, ({ one, many }) => ({
+  campaign: one(campaigns, {
+    fields: [adSets.campaignId],
+    references: [campaigns.id],
+  }),
+  ads: many(ads),
+}));
+
+export const adsRelations = relations(ads, ({ one }) => ({
+  adSet: one(adSets, {
+    fields: [ads.adSetId],
+    references: [adSets.id],
+  }),
+}));
+
+// Inferred types for queries
+export type AdAccount = typeof adAccounts.$inferSelect;
+export type Campaign = typeof campaigns.$inferSelect;
+export type AdSet = typeof adSets.$inferSelect;
+export type Ad = typeof ads.$inferSelect;
+export type MetaConnection = typeof metaConnections.$inferSelect;
+export type UserSelectedAdAccount = typeof userSelectedAdAccount.$inferSelect;
+export type SyncJob = typeof syncJobs.$inferSelect;

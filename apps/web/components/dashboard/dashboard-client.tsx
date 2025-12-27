@@ -1,92 +1,59 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, Bell, X, RefreshCw } from "lucide-react";
+import { useState, useMemo } from "react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  AdReportCard,
-  ActionPanel,
-  QuickStats,
-  LogoutButton,
-  type AdReportCardProps,
-} from "@/app/dashboard/components";
-import { recordAdReview } from "@/app/actions/ads";
-import { triggerManualSync, syncMockDataToDatabase } from "@/app/actions/meta";
+import { LogoutButton } from "@/app/dashboard/components";
+import { triggerSync } from "@/app/actions/sync";
 import { useRouter } from "next/navigation";
 import { DataTable } from "./data-table";
+import { AccountSelector } from "./account-selector";
+import { AccountSelectionDialog } from "./account-selection-dialog";
+import type { AdAccount, Campaign, AdSet, Ad } from "@repo/database/schema";
 
 interface DashboardClientProps {
-  ads: AdReportCardProps[];
   userId: string;
-  totalSpend: number;
-  averageRoas: number;
   lastSyncTime: Date | null;
   dataSource: "database" | "api";
-  accounts?: any[];
-  campaigns?: any[];
-  adSets?: any[];
-  rawAds?: any[];
+  accounts: AdAccount[];
+  campaigns: Campaign[];
+  adSets: AdSet[];
+  rawAds: Ad[];
+  initialSelectedAccountId: string | null;
 }
 
 export function DashboardClient({
-  ads,
   userId,
-  totalSpend,
-  averageRoas,
   lastSyncTime,
   dataSource,
-  accounts = [],
-  campaigns = [],
-  adSets = [],
-  rawAds = [],
+  accounts,
+  campaigns,
+  adSets,
+  rawAds,
+  initialSelectedAccountId,
 }: DashboardClientProps) {
   const router = useRouter();
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
-  const [actionsCompleted, setActionsCompleted] = useState(0);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-
-  const currentAd = ads[currentAdIndex];
-  const hasMoreAds = currentAdIndex < ads.length;
-  const pendingActions = ads.length - currentAdIndex;
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(
+    initialSelectedAccountId || ''
+  );
+  // Only show dialog if user has NEVER selected an account (initialSelectedAccountId is null from server)
+  // The server fetches from database, so if null, truly no selection exists
+  const [showAccountDialog, setShowAccountDialog] = useState(
+    initialSelectedAccountId === null && accounts.length > 0
+  );
 
   const handleSync = async () => {
     setIsSyncing(true);
     setSyncMessage(null);
-
-    // In mock mode, sync generated data to database
-    if (userId === "00000000-0000-0000-0000-000000000000") {
-      setSyncMessage('✓ Syncing mock data to database...');
-
-      try {
-        const result = await syncMockDataToDatabase(userId);
-
-        if (result.success) {
-          setSyncMessage(`✓ ${result.message}`);
-          setTimeout(() => {
-            router.refresh();
-          }, 1000);
-        } else {
-          setSyncMessage(`✗ ${result.error || 'Mock sync failed'}`);
-        }
-      } catch (error) {
-        setSyncMessage('✗ Mock sync failed');
-        console.error('Mock sync error:', error);
-      } finally {
-        setIsSyncing(false);
-        setTimeout(() => setSyncMessage(null), 5000);
-      }
-      return;
-    }
+    setSyncMessage('✓ Syncing data to database...');
 
     try {
-      const result = await triggerManualSync(userId);
+      const result = await triggerSync(userId);
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);
-        // Refresh the page to show new data
         setTimeout(() => {
           router.refresh();
         }, 1000);
@@ -98,7 +65,6 @@ export function DashboardClient({
       console.error('Sync error:', error);
     } finally {
       setIsSyncing(false);
-      // Clear message after 5 seconds
       setTimeout(() => setSyncMessage(null), 5000);
     }
   };
@@ -120,53 +86,65 @@ export function DashboardClient({
     return `${diffDays}d ago`;
   };
 
-  const handleApply = async () => {
-    if (!currentAd) return;
-
-    try {
-      // Skip recording in mock mode
-      if (userId !== "00000000-0000-0000-0000-000000000000") {
-        await recordAdReview(userId, currentAd.id, "apply");
-      }
-      setActionsCompleted((prev) => prev + 1);
-      setExitDirection("right");
-
-      setTimeout(() => {
-        setExitDirection(null);
-        setCurrentAdIndex((prev) => prev + 1);
-      }, 400);
-    } catch (error) {
-      console.error("Failed to record review:", error);
+  // Filter data based on selected account
+  const filteredData = useMemo(() => {
+    // If no account is selected, return empty data
+    if (!selectedAccountId) {
+      return { campaigns: [], adSets: [], ads: [] };
     }
+
+    // Filter campaigns by account
+    const filteredCampaigns = campaigns.filter(
+      (campaign) => campaign.adAccountId === selectedAccountId
+    );
+    const campaignIds = new Set(filteredCampaigns.map((c) => c.id));
+
+    // Filter ad sets by campaigns
+    const filteredAdSets = adSets.filter(
+      (adSet) => adSet.campaignId && campaignIds.has(adSet.campaignId)
+    );
+    const adSetIds = new Set(filteredAdSets.map((a) => a.id));
+
+    // Filter ads by ad sets
+    const filteredAds = rawAds.filter(
+      (ad) => ad.adSetId && adSetIds.has(ad.adSetId)
+    );
+
+    return {
+      campaigns: filteredCampaigns,
+      adSets: filteredAdSets,
+      ads: filteredAds,
+    };
+  }, [selectedAccountId, campaigns, adSets, rawAds]);
+
+  const handleAccountSelected = async (accountId: string) => {
+    // Update local state immediately to close dialog
+    setSelectedAccountId(accountId);
+    setShowAccountDialog(false);
+
+    // Refresh the page to get updated data (the dialog already saved to DB)
+    // Add small delay to ensure DB write completes
+    setTimeout(() => {
+      router.refresh();
+    }, 300);
   };
 
-  const handleSkip = async () => {
-    if (!currentAd) return;
-
-    try {
-      // Skip recording in mock mode
-      if (userId !== "00000000-0000-0000-0000-000000000000") {
-        await recordAdReview(userId, currentAd.id, "skip");
-      }
-      setExitDirection("left");
-
-      setTimeout(() => {
-        setExitDirection(null);
-        setCurrentAdIndex((prev) => prev + 1);
-      }, 400);
-    } catch (error) {
-      console.error("Failed to record review:", error);
-    }
-  };
-
-  const getExitClass = () => {
-    if (exitDirection === "right") return "animate-card-exit-right";
-    if (exitDirection === "left") return "animate-card-exit-left";
-    return "animate-card-enter";
+  const handleAccountChange = async (accountId: string) => {
+    setSelectedAccountId(accountId);
+    // Save to database
+    const { setUserSelectedAdAccount } = await import("@/app/actions/meta");
+    await setUserSelectedAdAccount(accountId);
   };
 
   return (
     <>
+      {/* Account Selection Dialog */}
+      <AccountSelectionDialog
+        open={showAccountDialog}
+        accounts={accounts}
+        onAccountSelected={handleAccountSelected}
+      />
+
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:block min-h-screen relative z-10">
         {/* Clean Header */}
@@ -175,7 +153,7 @@ export function DashboardClient({
             <div className="flex items-center justify-between">
               {/* Logo */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -187,9 +165,9 @@ export function DashboardClient({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {/* Sync Status & Button */}
-                <div className="flex items-center gap-2 mr-2">
+                <div className="flex items-center gap-2">
                   {syncMessage && (
                     <span className={`text-xs px-2 py-1 rounded-md ${
                       syncMessage.startsWith('✓')
@@ -218,14 +196,13 @@ export function DashboardClient({
                   </Button>
                 </div>
 
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
-                  {pendingActions > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center">
-                      {pendingActions}
-                    </span>
-                  )}
-                </Button>
+                {/* Account Selector */}
+                <AccountSelector
+                  accounts={accounts}
+                  selectedAccountId={selectedAccountId}
+                  onAccountChange={handleAccountChange}
+                />
+
                 <LogoutButton />
               </div>
             </div>
@@ -236,9 +213,9 @@ export function DashboardClient({
         <main className="max-w-7xl mx-auto px-6 py-8">
           <DataTable
             accounts={accounts}
-            campaigns={campaigns}
-            adSets={adSets}
-            ads={rawAds}
+            campaigns={filteredData.campaigns}
+            adSets={filteredData.adSets}
+            ads={filteredData.ads}
           />
         </main>
       </div>
@@ -249,15 +226,8 @@ export function DashboardClient({
         <header className="safe-area-top bg-background/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-50">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => setShowMobileMenu(true)}
-                className="w-10 h-10 rounded-xl hover:bg-muted/50 flex items-center justify-center"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary to-chart-2 flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -274,6 +244,11 @@ export function DashboardClient({
                 >
                   <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
                 </Button>
+                <AccountSelector
+                  accounts={accounts}
+                  selectedAccountId={selectedAccountId}
+                  onAccountChange={handleAccountChange}
+                />
                 <LogoutButton />
               </div>
             </div>
@@ -301,9 +276,9 @@ export function DashboardClient({
           <div className="px-4 py-6 space-y-4">
             <DataTable
               accounts={accounts}
-              campaigns={campaigns}
-              adSets={adSets}
-              ads={rawAds}
+              campaigns={filteredData.campaigns}
+              adSets={filteredData.adSets}
+              ads={filteredData.ads}
             />
           </div>
         </div>

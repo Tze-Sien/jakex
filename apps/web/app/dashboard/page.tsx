@@ -1,94 +1,73 @@
-import { transformMetaAdToCardProps } from "@/lib/transform-meta-data";
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import type { AdReportCardProps } from "@/app/dashboard/components";
-import { fetchDatabaseAds } from "@/app/actions/meta";
-import { AdStatus } from "@repo/meta-api";
+import {
+  getMetaConnection,
+  getAdAccountsFromDatabase,
+  getCampaignsFromDatabase,
+  getAdSetsFromDatabase,
+  getAdsFromDatabase,
+  getUserSelectedAdAccount,
+} from "@/app/actions/meta";
+import { HeaderActions } from "@/components/dashboard/header-actions";
 
-// Force dynamic rendering to ensure cookies() works properly
-export const dynamic = 'force-dynamic';
-
-/**
- * Dashboard Page - Server Component (TEMP: Auth Bypassed for Testing)
- * Displays synced data from database
- */
 export default async function DashboardPage() {
   // TEMPORARY: Bypass authentication and use mock user ID
   const userId = "00000000-0000-0000-0000-000000000000";
 
-  // Fetch data from database
-  const result = await fetchDatabaseAds(userId);
+  // Get user's META connection
+  const connection = await getMetaConnection(userId).catch((error) => {
+    console.error("Error fetching META connection:", error);
+    return null;
+  });
 
-  let transformedAds: AdReportCardProps[] = [];
-  let dataSource: "database" | "api" = "database";
-  let lastSyncTime: Date | null = null;
+  // Fetch all data from database (or empty arrays if no connection)
+  const accounts = connection ? await getAdAccountsFromDatabase(connection.id).catch(() => []) : [];
+  const campaigns = connection ? await getCampaignsFromDatabase(connection.id).catch(() => []) : [];
+  const adSets = connection ? await getAdSetsFromDatabase(connection.id).catch(() => []) : [];
+  const ads = connection ? await getAdsFromDatabase(connection.id).catch(() => []) : [];
 
-  if (result.success && result.data) {
-    const { accounts, campaigns, adSets, ads, lastSyncTime: syncTime } = result.data;
-    lastSyncTime = syncTime;
+  // Get selected ad account from database
+  const selectedResult = connection ? await getUserSelectedAdAccount(userId).catch(() => ({ success: false, selectedAccountId: null })) : { success: false, selectedAccountId: null };
+  const selectedAccountId = selectedResult.success ? selectedResult.selectedAccountId : null;
 
-    // Transform database data for UI
-    transformedAds = ads.map((ad) => {
-      // Find corresponding campaign
-      const campaign = campaigns.find((c) => c.id === ad.campaign_id);
+  // Get last sync time from the most recent synced entity
+  const allEntities = [...accounts, ...campaigns, ...adSets, ...ads];
+  const syncedEntities = allEntities.filter((e): e is typeof e & { lastSyncedAt: Date } => e.lastSyncedAt != null);
+  const lastSyncTime = syncedEntities.length > 0
+    ? new Date(Math.max(...syncedEntities.map(e => new Date(e.lastSyncedAt).getTime())))
+    : null;
 
-      // Skip ads without campaign data
-      if (!campaign) {
-        return null;
-      }
-
-      // Ensure ad has required fields with proper types
-      const adWithDefaults = {
-        ...ad,
-        name: ad.name || "Unnamed Ad",
-        status: (ad.status || "ACTIVE") as AdStatus,
-        created_time: ad.created_time,
-        updated_time: ad.updated_time,
-      };
-
-      // Create insights object from ad data (cast as any to bypass strict typing)
-      const adInsights = {
-        ad_id: ad.id,
-        account_id: ad.account_id,
-        date_start: new Date().toISOString().split('T')[0],
-        date_stop: new Date().toISOString().split('T')[0],
-        impressions: ad.insights.impressions,
-        clicks: ad.insights.clicks,
-        spend: ad.insights.spend,
-        ctr: ad.insights.ctr,
-        cpc: ad.insights.cpc,
-        cpm: "0",
-        cpp: "0",
-        conversions: ad.insights.conversions,
-        conversion_value: ad.insights.conversion_value,
-        roas: ad.insights.roas,
-      } as any;
-
-      return {
-        id: ad.id || "",
-        ...transformMetaAdToCardProps(adWithDefaults as any, adInsights, campaign as any),
-      };
-    }).filter((ad): ad is AdReportCardProps => ad !== null);
-  }
-
-  // Calculate aggregate stats
-  const totalSpend = transformedAds.reduce((sum, ad) => sum + ad.metrics.spend, 0);
-  const averageRoas = transformedAds.length > 0
-    ? transformedAds.reduce((sum, ad) => sum + ad.metrics.roas, 0) / transformedAds.length
-    : 0;
-
-  // Render client component with data
   return (
-    <DashboardClient
-      ads={transformedAds}
-      userId={userId}
-      totalSpend={totalSpend}
-      averageRoas={averageRoas}
-      lastSyncTime={lastSyncTime}
-      dataSource={dataSource}
-      accounts={result.success && result.data ? result.data.accounts : []}
-      campaigns={result.success && result.data ? result.data.campaigns : []}
-      adSets={result.success && result.data ? result.data.adSets : []}
-      rawAds={result.success && result.data ? result.data.ads : []}
-    />
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-foreground">JakeX</h1>
+                <p className="text-xs text-muted-foreground">Ads Manager</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <HeaderActions
+              accounts={accounts}
+              selectedAccountId={selectedAccountId}
+              lastSyncTime={lastSyncTime}
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Empty Body */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Content will go here */}
+      </main>
+    </div>
   );
 }
