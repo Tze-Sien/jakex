@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  transpilePackages: ["@repo/database"],
+  transpilePackages: ["@repo/database", "@repo/auth"],
 };
 
 export default nextConfig;

@@ -8,14 +8,14 @@ export class MetaAdsClient {
 
   constructor(accessToken: string) {
     this.accessToken = accessToken;
-    
+
     // Check if we should use the Mock API
     this.useMock = process.env.NEXT_PUBLIC_USE_MOCK_META_API === 'true';
-    
-    this.baseUrl = this.useMock 
-      ? 'http://localhost:3000/api/mock/meta' 
+
+    this.baseUrl = this.useMock
+      ? 'http://localhost:3001/api/mock/meta'
       : 'https://graph.facebook.com/v19.0';
-      
+
     if (this.useMock) {
         console.log('⚠️ MetaAdsClient initialized in MOCK mode');
     } else {

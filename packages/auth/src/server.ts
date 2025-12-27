@@ -1,6 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -87,13 +86,13 @@ export async function createRouteHandlerClient(): Promise<SupabaseClient> {
  *
  * @returns The current session or null if not authenticated
  */
-export const getServerSession = cache(async () => {
+export async function getServerSession() {
   const supabase = await createServerSupabaseClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
   return session;
-});
+}
 
 /**
  * Gets the current user from the server.
@@ -101,13 +100,13 @@ export const getServerSession = cache(async () => {
  *
  * @returns The current user or null if not authenticated
  */
-export const getServerUser = cache(async () => {
+export async function getServerUser() {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-});
+}
 
 /**
  * Requires authentication for Server Components.

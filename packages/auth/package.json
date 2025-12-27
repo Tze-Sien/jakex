@@ -20,6 +20,11 @@
             "types": "./dist/providers.d.ts",
             "import": "./dist/providers.mjs",
             "require": "./dist/providers.js"
+        },
+        "./server": {
+            "types": "./dist/server.d.ts",
+            "import": "./dist/server.mjs",
+            "require": "./dist/server.js"
         }
     },
     "scripts": {
@@ -29,6 +34,7 @@
         "check-types": "tsc --noEmit"
     },
     "dependencies": {
+        "@supabase/ssr": "^0.8.0",
         "@supabase/supabase-js": "^2.87.1"
     },
     "devDependencies": {

@@ -129,7 +129,9 @@ export function generateMockAdSet(accountId: string, campaignId: string): MetaAd
  * Generate a random mock ad
  */
 export function generateMockAd(accountId: string, campaignId: string, adSetId: string): MetaAd {
-  const adId = `${adSetId}_${faker.number.int({ min: 1, max: 99 })}`;
+  // Use timestamp + random to ensure uniqueness
+  const uniqueSuffix = `${Date.now()}_${faker.number.int({ min: 1000, max: 9999 })}`;
+  const adId = `${adSetId}_${uniqueSuffix}`;
   const creativeId = faker.number.int({ min: 100000, max: 999999 }).toString();
 
   const adFormats = ['Video', 'Image', 'Carousel', 'Collection', 'Stories'];
