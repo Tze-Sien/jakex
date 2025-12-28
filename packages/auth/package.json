@@ -6,26 +6,10 @@
     "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
     "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
-            "require": "./dist/index.js"
-        },
-        "./client": {
-            "types": "./dist/client.d.ts",
-            "import": "./dist/client.mjs",
-            "require": "./dist/client.js"
-        },
-        "./providers": {
-            "types": "./dist/providers.d.ts",
-            "import": "./dist/providers.mjs",
-            "require": "./dist/providers.js"
-        },
-        "./server": {
-            "types": "./dist/server.d.ts",
-            "import": "./dist/server.mjs",
-            "require": "./dist/server.js"
-        }
+        ".": "./src/index.ts",
+        "./client": "./src/client.ts",
+        "./providers": "./src/providers.ts",
+        "./server": "./src/server.ts"
     },
     "scripts": {
         "build": "tsup",

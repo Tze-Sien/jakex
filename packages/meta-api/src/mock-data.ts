@@ -113,14 +113,18 @@ export function generateMockAdSet(accountId: string, campaignId: string): MetaAd
       CampaignBidStrategy.LOWEST_COST_WITH_BID_CAP
     ]),
     daily_budget: dailyBudget.toString(),
-    targeting: {
-      geo_locations: {
-        countries: [faker.location.countryCode(), faker.location.countryCode()]
-      },
-      age_min: faker.number.int({ min: 18, max: 45 }),
-      age_max: faker.number.int({ min: 46, max: 65 }),
-      publisher_platforms: faker.helpers.arrayElements(['facebook', 'instagram', 'audience_network', 'messenger'], { min: 1, max: 3 })
-    },
+    targeting: (() => {
+      const ageMin = faker.number.int({ min: 18, max: 55 });
+      const ageMax = Math.min(65, ageMin + faker.number.int({ min: 5, max: 20 }));
+      return {
+        geo_locations: {
+          countries: [faker.location.countryCode(), faker.location.countryCode()]
+        },
+        age_min: ageMin,
+        age_max: ageMax,
+        publisher_platforms: faker.helpers.arrayElements(['facebook', 'instagram', 'audience_network', 'messenger'], { min: 1, max: 3 })
+      };
+    })(),
     start_time: faker.date.past({ years: 1 }).toISOString()
   };
 }
@@ -245,17 +249,23 @@ export function generateMockInsights(
 
   // Impressions scale with spend and level
   const impressionMultiplier = level === 'ad' ? 100 : level === 'adset' ? 500 : level === 'campaign' ? 2000 : 5000;
-  const impressions = faker.number.int({ min: Math.floor(spend * impressionMultiplier * 0.8), max: Math.floor(spend * impressionMultiplier * 1.2) });
+  const impressionsMin = Math.floor(spend * impressionMultiplier * 0.8);
+  const impressionsMax = Math.max(impressionsMin, Math.floor(spend * impressionMultiplier * 1.2));
+  const impressions = faker.number.int({ min: impressionsMin, max: impressionsMax });
 
   // Reach is typically 60-95% of impressions
-  const reach = faker.number.int({ min: Math.floor(impressions * 0.6), max: Math.floor(impressions * 0.95) });
+  const reachMin = Math.floor(impressions * 0.6);
+  const reachMax = Math.max(reachMin, Math.floor(impressions * 0.95));
+  const reach = faker.number.int({ min: reachMin, max: reachMax });
 
   // Frequency = impressions / reach
   const frequency = (impressions / reach).toFixed(2);
 
   // CTR varies by level (ads typically have higher CTR)
   const ctrMultiplier = level === 'ad' ? 0.05 : level === 'adset' ? 0.03 : 0.02;
-  const clicks = faker.number.int({ min: Math.floor(impressions * ctrMultiplier * 0.5), max: Math.floor(impressions * ctrMultiplier * 1.5) });
+  const clicksMin = Math.floor(impressions * ctrMultiplier * 0.5);
+  const clicksMax = Math.max(clicksMin, Math.floor(impressions * ctrMultiplier * 1.5));
+  const clicks = faker.number.int({ min: clicksMin, max: clicksMax });
 
   // Calculate cost metrics
   const cpc = clicks > 0 ? (spend / clicks).toFixed(2) : '0.00';
@@ -265,10 +275,14 @@ export function generateMockInsights(
 
   // Generate conversion actions with attribution windows
   const hasConversions = faker.datatype.boolean({ probability: 0.7 });
-  const purchases = hasConversions ? faker.number.int({ min: 1, max: Math.floor(clicks * 0.05) }) : 0;
-  const landingPageViews = faker.number.int({ min: Math.floor(clicks * 0.3), max: Math.floor(clicks * 0.8) });
-  const addToCarts = faker.number.int({ min: Math.floor(purchases * 1.5), max: Math.floor(clicks * 0.3) });
-  const initiateCheckouts = faker.number.int({ min: purchases, max: Math.floor(addToCarts * 0.6) });
+  const purchases = hasConversions ? faker.number.int({ min: 1, max: Math.max(1, Math.floor(clicks * 0.05)) }) : 0;
+  const landingPageViewsMin = Math.floor(clicks * 0.3);
+  const landingPageViewsMax = Math.max(landingPageViewsMin, Math.floor(clicks * 0.8));
+  const landingPageViews = faker.number.int({ min: landingPageViewsMin, max: landingPageViewsMax });
+  const addToCartsMin = Math.floor(purchases * 1.5);
+  const addToCartsMax = Math.max(addToCartsMin, Math.floor(clicks * 0.3));
+  const addToCarts = faker.number.int({ min: addToCartsMin, max: addToCartsMax });
+  const initiateCheckouts = faker.number.int({ min: purchases, max: Math.max(purchases, Math.floor(addToCarts * 0.6)) });
 
   const actions = [
     {
@@ -286,7 +300,7 @@ export function generateMockInsights(
     },
     {
       action_type: 'offsite_conversion.fb_pixel_view_content',
-      value: faker.number.int({ min: Math.floor(landingPageViews * 0.5), max: landingPageViews }).toString()
+      value: faker.number.int({ min: Math.floor(landingPageViews * 0.5), max: Math.max(Math.floor(landingPageViews * 0.5), landingPageViews) }).toString()
     }
   ];
 
