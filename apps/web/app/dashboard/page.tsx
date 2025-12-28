@@ -38,7 +38,14 @@ export default async function DashboardPage() {
     : null;
 
   // Get latest AI analysis
-  const latestAnalysis = await getLatestAIAnalysis(userId).catch(() => null);
+  let latestAnalysis = null;
+  let analysisError = null;
+  try {
+    latestAnalysis = await getLatestAIAnalysis(userId);
+  } catch (error) {
+    analysisError = error instanceof Error ? error.message : String(error);
+    console.error("Failed to fetch AI analysis:", error);
+  }
 
   return (
     <div className="min-h-screen">
@@ -71,6 +78,21 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* Debug Info - Remove in production */}
+        {analysisError && (
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+              Database Error (Debug Info):
+            </h3>
+            <p className="text-xs text-red-800 dark:text-red-200 font-mono">
+              {analysisError}
+            </p>
+            <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+              Check your DATABASE_URL environment variable in Vercel
+            </p>
+          </div>
+        )}
+
         {/* AI Analysis Box */}
         <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
 
