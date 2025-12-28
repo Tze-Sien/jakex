@@ -1,0 +1,1 @@
+ALTER TABLE "ai_analyses" ADD COLUMN "practical_advice" text;
