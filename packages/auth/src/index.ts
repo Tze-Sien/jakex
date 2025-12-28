@@ -32,11 +32,5 @@ export { useAuth, useRequireAuth, useRedirectIfAuthenticated } from "./hooks";
 // Re-export Auth Provider
 export { AuthProvider, useAuthContext } from "./AuthProvider";
 
-// Re-export server utilities for Server Components
-export {
-  createServerSupabaseClient,
-  createRouteHandlerClient,
-  getServerSession,
-  getServerUser,
-  requireAuth,
-} from "./server";
+// Server utilities are available via @repo/auth/server
+// Do not import from the main package to avoid bundling server-only code in client bundles

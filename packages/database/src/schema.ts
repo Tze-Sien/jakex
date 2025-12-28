@@ -298,6 +298,50 @@ export const syncJobs = pgTable(
   ]
 );
 
+export const aiAnalyses = pgTable(
+  "ai_analyses",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    reportId: uuid("report_id")
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+
+    // Analysis content
+    overallAssessment: text("overall_assessment").notNull(),
+    keyFindings: jsonb("key_findings").notNull(), // Array of strings
+    performanceAnalysis: text("performance_analysis").notNull(),
+    creativeAnalysis: text("creative_analysis"),
+    targetingAnalysis: text("targeting_analysis"),
+    practicalAdvice: text("practical_advice"), // 经验谈 - Colloquial practical advice in 白话文
+    recommendations: jsonb("recommendations").notNull(), // Array of Recommendation objects
+    confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
+
+    // Metadata
+    llmProvider: text("llm_provider").notNull(), // 'groq' | 'gemini'
+    llmModel: text("llm_model").notNull(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    latencyMs: integer("latency_ms"),
+    costUsd: decimal("cost_usd", { precision: 10, scale: 6 }),
+
+    status: text("status").notNull().default("completed"), // 'completed' | 'failed'
+    errorMessage: text("error_message"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("ai_analyses_report_id_idx").on(t.reportId),
+    index("ai_analyses_user_id_idx").on(t.userId),
+    index("ai_analyses_created_at_idx").on(t.createdAt),
+  ]
+);
+
 // Relations
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   adAccount: one(adAccounts, {
@@ -330,3 +374,6 @@ export type Ad = typeof ads.$inferSelect;
 export type MetaConnection = typeof metaConnections.$inferSelect;
 export type UserSelectedAdAccount = typeof userSelectedAdAccount.$inferSelect;
 export type SyncJob = typeof syncJobs.$inferSelect;
+export type Report = typeof reports.$inferSelect;
+export type Insight = typeof insights.$inferSelect;
+export type AiAnalysis = typeof aiAnalyses.$inferSelect;

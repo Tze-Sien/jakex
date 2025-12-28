@@ -509,6 +509,7 @@ export async function syncAdAccountData(
       reportId: report.id,
       totalSynced,
       errors,
+      userId, // Return userId for AI analysis
     };
   } catch (error) {
     // Update sync job with error
@@ -580,6 +581,7 @@ async function getOrCreateAdAccount(connectionId: string, accessToken: string) {
 /**
  * Triggers a manual sync for the current user
  * Automatically gets the user's connection and ad account
+ * Then triggers AI analysis on the synced data
  * @param userId - The user's ID
  * @returns Success status and message
  */
@@ -627,7 +629,9 @@ export async function triggerSync(userId: string) {
     if (result.success) {
       return {
         success: true,
-        message: `Synced ${result.totalSynced} items successfully`
+        message: `Synced ${result.totalSynced} items successfully`,
+        reportId: result.reportId,
+        syncJobId: result.syncJobId
       };
     } else {
       return {
@@ -640,6 +644,67 @@ export async function triggerSync(userId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Triggers sync and then AI analysis
+ * This is the main entry point for the sync + analyze workflow
+ * @param userId - The user's ID
+ * @returns Combined result of sync and analysis
+ */
+export async function triggerSyncAndAnalysis(userId: string) {
+  try {
+    // Step 1: Sync data
+    const syncResult = await triggerSync(userId);
+
+    if (!syncResult.success) {
+      return {
+        success: false,
+        error: syncResult.error,
+        step: "sync"
+      };
+    }
+
+    // Import AI analysis function dynamically to avoid circular dependencies
+    const { performAIAnalysis } = await import("./ai-analysis");
+
+    // Step 2: Perform AI analysis
+    const analysisResult = await performAIAnalysis(
+      syncResult.reportId!,
+      userId
+    );
+
+    if (!analysisResult.success) {
+      return {
+        success: false,
+        error: analysisResult.error,
+        step: "analysis",
+        syncSuccess: true,
+        syncMessage: syncResult.message,
+        reportId: syncResult.reportId
+      };
+    }
+
+    return {
+      success: true,
+      message: `${syncResult.message}. AI analysis completed.`,
+      reportId: syncResult.reportId,
+      analysisId: analysisResult.analysisId,
+      syncJobId: syncResult.syncJobId,
+      analysis: {
+        overallAssessment: analysisResult.overallAssessment,
+        keyFindings: analysisResult.keyFindings,
+        recommendations: analysisResult.recommendations
+      }
+    };
+  } catch (error) {
+    console.error("Sync and analysis error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      step: "unknown"
     };
   }
 }

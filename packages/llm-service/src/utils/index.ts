@@ -1,0 +1,1 @@
+export { hashInput } from "./hash"

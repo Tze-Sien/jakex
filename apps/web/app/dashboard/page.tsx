@@ -6,7 +6,9 @@ import {
   getAdsFromDatabase,
   getUserSelectedAdAccount,
 } from "@/app/actions/meta";
+import { getLatestAIAnalysis } from "@/app/actions/ai-analysis";
 import { HeaderActions } from "@/components/dashboard/header-actions";
+import { AIAnalysisBox } from "@/components/dashboard/ai-analysis-box";
 
 export default async function DashboardPage() {
   // TEMPORARY: Bypass authentication and use mock user ID
@@ -34,6 +36,9 @@ export default async function DashboardPage() {
   const lastSyncTime = syncedEntities.length > 0
     ? new Date(Math.max(...syncedEntities.map(e => new Date(e.lastSyncedAt).getTime())))
     : null;
+
+  // Get latest AI analysis
+  const latestAnalysis = await getLatestAIAnalysis(userId).catch(() => null);
 
   return (
     <div className="min-h-screen">
@@ -64,9 +69,16 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Empty Body */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Content will go here */}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* AI Analysis Box */}
+        <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
+
+        {/* Placeholder for future content */}
+        <div className="text-center text-muted-foreground py-12">
+          <p>Dashboard content coming soon...</p>
+          <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
+        </div>
       </main>
     </div>
   );

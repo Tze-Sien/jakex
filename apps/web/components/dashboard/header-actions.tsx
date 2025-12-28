@@ -5,7 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/app/dashboard/components";
 import { AccountSelector } from "./account-selector";
-import { triggerSync } from "@/app/actions/sync";
+import { triggerSyncAndAnalysis } from "@/app/actions/sync";
 import { useRouter } from "next/navigation";
 import type { AdAccount } from "@repo/database/schema";
 
@@ -27,10 +27,10 @@ export function HeaderActions({
   const handleSync = async () => {
     setIsSyncing(true);
     setSyncMessage(null);
-    setSyncMessage('✓ Syncing data to database...');
+    setSyncMessage('✓ Syncing data and running AI analysis...');
 
     try {
-      const result = await triggerSync("00000000-0000-0000-0000-000000000000");
+      const result = await triggerSyncAndAnalysis("00000000-0000-0000-0000-000000000000");
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);
@@ -38,7 +38,13 @@ export function HeaderActions({
           router.refresh();
         }, 1000);
       } else {
-        setSyncMessage(`✗ ${result.error || 'Sync failed'}`);
+        if (result.step === 'analysis') {
+          // Show the actual error message from analysis
+          setSyncMessage(`✓ Sync completed. ✗ AI analysis failed: ${result.error || 'Unknown error'}`);
+          console.error('AI Analysis error:', result.error);
+        } else {
+          setSyncMessage(`✗ ${result.error || 'Sync failed'}`);
+        }
       }
     } catch (error) {
       setSyncMessage('✗ Sync failed');

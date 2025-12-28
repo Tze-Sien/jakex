@@ -4,12 +4,13 @@ import { useState, useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/app/dashboard/components";
-import { triggerSync } from "@/app/actions/sync";
+import { triggerSyncAndAnalysis } from "@/app/actions/sync";
 import { useRouter } from "next/navigation";
 import { DataTable } from "./data-table";
 import { AccountSelector } from "./account-selector";
 import { AccountSelectionDialog } from "./account-selection-dialog";
-import type { AdAccount, Campaign, AdSet, Ad } from "@repo/database/schema";
+import { AIAnalysisBox } from "./ai-analysis-box";
+import type { AdAccount, Campaign, AdSet, Ad, AiAnalysis } from "@repo/database/schema";
 
 interface DashboardClientProps {
   userId: string;
@@ -20,6 +21,7 @@ interface DashboardClientProps {
   adSets: AdSet[];
   rawAds: Ad[];
   initialSelectedAccountId: string | null;
+  latestAnalysis?: AiAnalysis | null;
 }
 
 export function DashboardClient({
@@ -31,10 +33,13 @@ export function DashboardClient({
   adSets,
   rawAds,
   initialSelectedAccountId,
+  latestAnalysis,
 }: DashboardClientProps) {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(latestAnalysis || null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     initialSelectedAccountId || ''
   );
@@ -46,19 +51,53 @@ export function DashboardClient({
 
   const handleSync = async () => {
     setIsSyncing(true);
+    setIsAnalyzing(false);
     setSyncMessage(null);
     setSyncMessage('✓ Syncing data to database...');
 
     try {
-      const result = await triggerSync(userId);
+      const result = await triggerSyncAndAnalysis(userId);
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);
+
+        // Update AI analysis if available
+        if (result.analysis) {
+          setIsAnalyzing(false);
+          setAiAnalysis({
+            id: result.analysisId!,
+            reportId: result.reportId!,
+            userId: userId,
+            overallAssessment: result.analysis.overallAssessment,
+            keyFindings: result.analysis.keyFindings,
+            performanceAnalysis: '',
+            creativeAnalysis: null,
+            targetingAnalysis: null,
+            recommendations: result.analysis.recommendations,
+            confidenceScore: null,
+            llmProvider: 'groq',
+            llmModel: 'openai/gpt-oss-120b',
+            inputTokens: null,
+            outputTokens: null,
+            latencyMs: null,
+            costUsd: null,
+            status: 'completed',
+            errorMessage: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as AiAnalysis);
+        }
+
         setTimeout(() => {
           router.refresh();
         }, 1000);
       } else {
-        setSyncMessage(`✗ ${result.error || 'Sync failed'}`);
+        if (result.step === 'analysis') {
+          setSyncMessage(`✓ Sync completed. ✗ AI analysis failed: ${result.error}`);
+          console.error('AI Analysis error details:', result);
+        } else {
+          setSyncMessage(`✗ ${result.error || 'Sync failed'}`);
+        }
       }
     } catch (error) {
       setSyncMessage('✗ Sync failed');
@@ -210,7 +249,11 @@ export function DashboardClient({
         </header>
 
         {/* Main Content - Data Table */}
-        <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+          {/* AI Analysis Box */}
+          <AIAnalysisBox analysis={aiAnalysis} isLoading={isAnalyzing} />
+
+          {/* Data Table */}
           <DataTable
             accounts={accounts}
             campaigns={filteredData.campaigns}
@@ -274,6 +317,10 @@ export function DashboardClient({
         {/* Mobile Content - Data Table */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-6 space-y-4">
+            {/* AI Analysis Box */}
+            <AIAnalysisBox analysis={aiAnalysis} isLoading={isAnalyzing} />
+
+            {/* Data Table */}
             <DataTable
               accounts={accounts}
               campaigns={filteredData.campaigns}

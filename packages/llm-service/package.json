@@ -1,0 +1,26 @@
+{
+  "name": "@repo/llm-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/database": "workspace:*",
+    "groq-sdk": "^0.8.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.9.2"
+  }
+}
