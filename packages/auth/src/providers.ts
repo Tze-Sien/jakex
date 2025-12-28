@@ -26,6 +26,14 @@ export interface EmailAuthResult {
 }
 
 /**
+ * Get the base URL for OAuth callbacks.
+ * Prioritizes NEXT_PUBLIC_APP_URL env variable, falls back to window.location.origin.
+ */
+function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+}
+
+/**
  * Sign in with Facebook OAuth.
  * This will redirect the user to Facebook for authentication.
  */
@@ -37,7 +45,7 @@ export async function signInWithFacebook(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "facebook",
     options: {
-      redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${getBaseUrl()}/auth/callback`,
       scopes: options?.scopes ?? "email,public_profile",
       queryParams: options?.queryParams,
     },
@@ -58,7 +66,7 @@ export async function signInWithGoogle(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${getBaseUrl()}/auth/callback`,
       scopes: options?.scopes,
       queryParams: {
         access_type: "offline",
@@ -83,7 +91,7 @@ export async function signInWithOAuth(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${getBaseUrl()}/auth/callback`,
       scopes: options?.scopes,
       queryParams: options?.queryParams,
     },
@@ -147,7 +155,7 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      emailRedirectTo: options?.emailRedirectTo ?? `${window.location.origin}/auth/callback`,
+      emailRedirectTo: options?.emailRedirectTo ?? `${getBaseUrl()}/auth/callback`,
       data: options?.data,
     },
   });
@@ -196,7 +204,7 @@ export async function resetPasswordForEmail(
   const supabase = getSupabaseClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback?type=recovery`,
+    redirectTo: options?.redirectTo ?? `${getBaseUrl()}/auth/callback?type=recovery`,
   });
 
   return { error };
