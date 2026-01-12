@@ -4,18 +4,28 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatedBackground } from "../login/components/AnimatedBackground";
 import { MetaAuthCard, MetaAuthHero } from "./components";
+import { initiateMetaOAuth } from "@repo/meta-api";
 
 export default function AuthorizeMetaPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleConnect = async () => {
     setIsLoading(true);
-    // Simulate Meta OAuth flow
-    // In production, this would redirect to Meta's OAuth URL
-    setTimeout(() => {
-      router.push("/select-account");
-    }, 2000);
+    setError(null);
+    try {
+      // Initiate direct Meta OAuth flow
+      // This will redirect to Facebook for authorization
+      initiateMetaOAuth();
+
+      // Browser will automatically redirect to Meta OAuth
+      // No need to handle response here - it will come back to /auth/meta-callback
+    } catch (error) {
+      console.error('OAuth error:', error);
+      setError('Unexpected error. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -30,6 +40,13 @@ export default function AuthorizeMetaPage() {
 
             <div className="w-full max-w-md mx-auto">
               <MetaAuthCard isLoading={isLoading} onConnect={handleConnect} />
+
+              {/* Error Message */}
+              {error && (
+                <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive text-center">{error}</p>
+                </div>
+              )}
 
               {/* Footer Links */}
               <div className="mt-6 text-center space-y-3">
@@ -113,6 +130,13 @@ export default function AuthorizeMetaPage() {
             {/* Auth Card - Mobile Optimized */}
             <div className="space-y-6">
               <MetaAuthCard isLoading={isLoading} onConnect={handleConnect} />
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive text-center">{error}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { signUpWithEmail, signInWithFacebook, signInWithGoogle } from "@repo/auth";
+import { signUpWithEmail, signInWithGoogle } from "@repo/auth";
 import { Button } from "@/components/ui/button";
 import {
   AnimatedBackground,
@@ -13,21 +13,19 @@ import { UnifiedSignUpForm } from "./components/UnifiedSignUpForm";
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<
-    "facebook" | "google" | "email" | null
+    "google" | "email" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  const handleOAuthLogin = async (provider: "facebook" | "google") => {
+  const handleOAuthLogin = async (provider: "google") => {
     setIsLoading(true);
     setLoadingProvider(provider);
     setError(null);
 
     try {
-      const result = provider === "facebook"
-        ? await signInWithFacebook()
-        : await signInWithGoogle();
+      const result = await signInWithGoogle();
 
       if (result.error) {
         setError(result.error.message);

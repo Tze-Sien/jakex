@@ -38,7 +38,7 @@ export function EmailLoginForm({
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="Your email address"
                     required
                     disabled={isLoading}
                     value={email}

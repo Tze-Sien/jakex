@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmail, signInWithFacebook, signInWithGoogle } from "@repo/auth";
+import { signInWithEmail, signInWithGoogle } from "@repo/auth";
 import {
   AnimatedBackground,
   HeroSection,
@@ -11,19 +11,17 @@ import { UnifiedLoginForm } from "./components/UnifiedLoginForm";
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<
-    "facebook" | "google" | "email" | null
+    "google" | "email" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleOAuthLogin = async (provider: "facebook" | "google") => {
+  const handleOAuthLogin = async (provider: "google") => {
     setIsLoading(true);
     setLoadingProvider(provider);
     setError(null);
 
     try {
-      const result = provider === "facebook" 
-        ? await signInWithFacebook()
-        : await signInWithGoogle();
+      const result = await signInWithGoogle();
 
       if (result.error) {
         setError(result.error.message);

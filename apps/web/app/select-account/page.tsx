@@ -1,55 +1,56 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AnimatedBackground } from "../login/components/AnimatedBackground";
 import { AccountCard, SelectAccountHero } from "./components";
-
-// Mock data - in production, this would come from Meta API
-const mockAccounts = [
-  {
-    id: "1",
-    name: "E-commerce Store - Main",
-    accountId: "act_123456789",
-    currency: "USD",
-    status: "active" as const,
-    spend: 45230,
-    campaigns: 12,
-  },
-  {
-    id: "2",
-    name: "Brand Awareness Campaign",
-    accountId: "act_987654321",
-    currency: "USD",
-    status: "active" as const,
-    spend: 28750,
-    campaigns: 8,
-  },
-  {
-    id: "3",
-    name: "Q4 Holiday Promotions",
-    accountId: "act_456789123",
-    currency: "USD",
-    status: "active" as const,
-    spend: 15400,
-    campaigns: 5,
-  },
-  {
-    id: "4",
-    name: "Testing Account",
-    accountId: "act_321654987",
-    currency: "USD",
-    status: "inactive" as const,
-    spend: 2100,
-    campaigns: 2,
-  },
-];
+import { loadUserAdAccounts, saveUserSelectedAdAccounts } from "@/app/actions/meta";
 
 export default function SelectAccountPage() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    async function loadAccounts() {
+      try {
+        setIsLoadingAccounts(true);
+
+        const result = await loadUserAdAccounts();
+
+        if (!result.success) {
+          setError(result.error || 'Failed to load ad accounts');
+          if (result.needsAuth) {
+            router.push('/authorize-meta');
+          }
+          return;
+        }
+
+        // Transform Meta API response to UI format
+        const transformed = result.accounts.map(acc => ({
+          id: acc.id,
+          name: acc.name,
+          accountId: acc.account_id,
+          currency: acc.currency,
+          status: acc.account_status === 1 ? 'active' : 'inactive',
+          spend: parseFloat(acc.amount_spent || '0'),
+          campaigns: 0 // Will be populated after sync
+        }));
+
+        setAccounts(transformed);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsLoadingAccounts(false);
+      }
+    }
+
+    loadAccounts();
+  }, [router]);
 
   const handleSelectAccount = (id: string) => {
     setSelectedAccounts((prev) =>
@@ -61,10 +62,22 @@ export default function SelectAccountPage() {
     if (selectedAccounts.length === 0) return;
 
     setIsLoading(true);
-    // Simulate API call to save selected accounts
-    setTimeout(() => {
+    try {
+      const result = await saveUserSelectedAdAccounts({
+        selectedAccountIds: selectedAccounts,
+        accounts: accounts.filter(acc => selectedAccounts.includes(acc.id))
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save accounts');
+      }
+
       router.push("/collect-data");
-    }, 1500);
+    } catch (error) {
+      console.error('Error saving accounts:', error);
+      setError(String(error));
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -96,14 +109,25 @@ export default function SelectAccountPage() {
 
                   {/* Accounts List */}
                   <div className="space-y-3 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {mockAccounts.map((account) => (
-                      <AccountCard
-                        key={account.id}
-                        account={account}
-                        isSelected={selectedAccounts.includes(account.id)}
-                        onSelect={handleSelectAccount}
-                      />
-                    ))}
+                    {isLoadingAccounts ? (
+                      <div className="text-center py-8">
+                        <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">Loading ad accounts...</p>
+                      </div>
+                    ) : error ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-destructive">{error}</p>
+                      </div>
+                    ) : (
+                      accounts.map((account) => (
+                        <AccountCard
+                          key={account.id}
+                          account={account}
+                          isSelected={selectedAccounts.includes(account.id)}
+                          onSelect={handleSelectAccount}
+                        />
+                      ))
+                    )}
                   </div>
 
                   {/* Selection Summary */}
@@ -217,14 +241,25 @@ export default function SelectAccountPage() {
 
             {/* Accounts List */}
             <div className="space-y-3">
-              {mockAccounts.map((account) => (
-                <AccountCard
-                  key={account.id}
-                  account={account}
-                  isSelected={selectedAccounts.includes(account.id)}
-                  onSelect={handleSelectAccount}
-                />
-              ))}
+              {isLoadingAccounts ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Loading ad accounts...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              ) : (
+                accounts.map((account) => (
+                  <AccountCard
+                    key={account.id}
+                    account={account}
+                    isSelected={selectedAccounts.includes(account.id)}
+                    onSelect={handleSelectAccount}
+                  />
+                ))
+              )}
             </div>
           </div>
         </div>

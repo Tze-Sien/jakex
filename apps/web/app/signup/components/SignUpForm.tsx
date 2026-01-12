@@ -56,7 +56,7 @@ export function SignUpForm({
         <Input
           id="fullName"
           type="text"
-          placeholder="John Doe"
+          placeholder="Your full name"
           required
           disabled={isLoading}
           value={fullName}
@@ -74,7 +74,7 @@ export function SignUpForm({
         <Input
           id="email"
           type="email"
-          placeholder="name@example.com"
+          placeholder="Your email address"
           required
           disabled={isLoading}
           value={email}
@@ -92,7 +92,7 @@ export function SignUpForm({
         <Input
           id="password"
           type="password"
-          placeholder="At least 6 characters"
+          placeholder="Your password"
           required
           disabled={isLoading}
           value={password}
