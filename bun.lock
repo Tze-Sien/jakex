@@ -7,7 +7,15 @@
         "@supabase/ssr": "^0.8.0",
       },
       "devDependencies": {
+        "@babel/core": "^7.28.5",
+        "@babel/generator": "^7.28.5",
+        "@babel/parser": "^7.28.5",
+        "@babel/traverse": "^7.28.5",
+        "@babel/types": "^7.28.5",
         "@faker-js/faker": "^10.1.0",
+        "@types/babel__core": "^7.20.5",
+        "@types/babel__generator": "^7.27.0",
+        "@types/babel__traverse": "^7.28.0",
         "prettier": "^3.7.4",
         "shadcn": "^3.6.1",
         "turbo": "^2.6.3",
@@ -53,6 +61,7 @@
       "name": "@repo/auth",
       "version": "0.0.0",
       "dependencies": {
+        "@repo/shared": "workspace:*",
         "@supabase/ssr": "^0.8.0",
         "@supabase/supabase-js": "^2.87.1",
       },
@@ -115,6 +124,7 @@
       "name": "@repo/meta-api",
       "version": "0.0.0",
       "dependencies": {
+        "@repo/shared": "workspace:*",
         "facebook-nodejs-business-sdk": "^24.0.1",
         "zod": "^3.22.4",
       },
@@ -122,6 +132,15 @@
         "@repo/eslint-config": "workspace:*",
         "@repo/typescript-config": "workspace:*",
         "@types/facebook-nodejs-business-sdk": "^23.0.0",
+        "typescript": "^5.3.3",
+      },
+    },
+    "packages/shared": {
+      "name": "@repo/shared",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@repo/typescript-config": "workspace:*",
         "typescript": "^5.3.3",
       },
     },
@@ -458,6 +477,8 @@
 
     "@repo/meta-api": ["@repo/meta-api@workspace:packages/meta-api"],
 
+    "@repo/shared": ["@repo/shared@workspace:packages/shared"],
+
     "@repo/typescript-config": ["@repo/typescript-config@workspace:packages/typescript-config"],
 
     "@repo/ui": ["@repo/ui@workspace:packages/ui"],
@@ -561,6 +582,14 @@
     "@ts-morph/common": ["@ts-morph/common@0.27.0", "", { "dependencies": { "fast-glob": "^3.3.3", "minimatch": "^10.0.1", "path-browserify": "^1.0.1" } }, "sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ=="],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
+
+    "@types/babel__core": ["@types/babel__core@7.20.5", "", { "dependencies": { "@babel/parser": "^7.20.7", "@babel/types": "^7.20.7", "@types/babel__generator": "*", "@types/babel__template": "*", "@types/babel__traverse": "*" } }, "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA=="],
+
+    "@types/babel__generator": ["@types/babel__generator@7.27.0", "", { "dependencies": { "@babel/types": "^7.0.0" } }, "sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg=="],
+
+    "@types/babel__template": ["@types/babel__template@7.4.4", "", { "dependencies": { "@babel/parser": "^7.1.0", "@babel/types": "^7.0.0" } }, "sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A=="],
+
+    "@types/babel__traverse": ["@types/babel__traverse@7.28.0", "", { "dependencies": { "@babel/types": "^7.28.2" } }, "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q=="],
 
     "@types/d3-array": ["@types/d3-array@3.2.2", "", {}, "sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw=="],
 
