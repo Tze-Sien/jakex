@@ -14,6 +14,11 @@ import {
 import { eq, and } from "drizzle-orm";
 import { MetaAdsClient, InsightsDatePreset, InsightsLevel } from "@repo/meta-api";
 
+// Define custom error type for auth-related errors
+interface AuthError extends Error {
+  needsAuth?: boolean;
+}
+
 /**
  * Syncs all data for a specific ad account from Meta API to the database
  * This includes campaigns, ad sets, ads, and insights
@@ -306,8 +311,8 @@ export async function syncAdAccountData(
                   impressions: parseInt(insight.impressions) || 0,
                   clicks: parseInt(insight.clicks) || 0,
                   ctr: insight.ctr || null,
-                  cpc: parseInt(insight.cpc) || null,
-                  cpm: parseInt(insight.cpm) || null,
+                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
+                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
                   conversions: 0, // Extract from actions if needed
                   costPerConversion: null,
                   roas: null,
@@ -380,8 +385,8 @@ export async function syncAdAccountData(
                   impressions: parseInt(insight.impressions) || 0,
                   clicks: parseInt(insight.clicks) || 0,
                   ctr: insight.ctr || null,
-                  cpc: parseInt(insight.cpc) || null,
-                  cpm: parseInt(insight.cpm) || null,
+                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
+                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
                   conversions: 0,
                   costPerConversion: null,
                   roas: null,
@@ -454,8 +459,8 @@ export async function syncAdAccountData(
                   impressions: parseInt(insight.impressions) || 0,
                   clicks: parseInt(insight.clicks) || 0,
                   ctr: insight.ctr || null,
-                  cpc: parseInt(insight.cpc) || null,
-                  cpm: parseInt(insight.cpm) || null,
+                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
+                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
                   conversions: 0,
                   costPerConversion: null,
                   roas: null,
@@ -512,6 +517,13 @@ export async function syncAdAccountData(
       userId, // Return userId for AI analysis
     };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Check if the error is related to expired or invalid access token
+    const isTokenExpired = errorMessage.includes('Session has expired') ||
+                          errorMessage.includes('Error validating access token') ||
+                          errorMessage.includes('OAuthException');
+
     // Update sync job with error
     await db
       .update(syncJobs)
@@ -520,10 +532,17 @@ export async function syncAdAccountData(
         completedAt: new Date(),
         totalSynced,
         totalErrors: errors.length + 1,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorDetails: [...errors, error instanceof Error ? error.message : String(error)],
+        errorMessage: errorMessage,
+        errorDetails: [...errors, errorMessage],
       })
       .where(eq(syncJobs.id, syncJob.id));
+
+    // If token expired, include that info in the error
+    if (isTokenExpired) {
+      const tokenError = new Error(errorMessage) as AuthError;
+      tokenError.needsAuth = true;
+      throw tokenError;
+    }
 
     throw error;
   }
@@ -612,9 +631,15 @@ export async function triggerSync(userId: string) {
     try {
       adAccount = await getOrCreateAdAccount(connection.id, connection.accessToken);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isTokenExpired = errorMessage.includes('Session has expired') ||
+                            errorMessage.includes('Error validating access token') ||
+                            errorMessage.includes('OAuthException');
+
       return {
         success: false,
-        error: `Failed to get ad account: ${error instanceof Error ? error.message : String(error)}`
+        error: `Failed to get ad account: ${errorMessage}`,
+        needsAuth: isTokenExpired
       };
     }
 
@@ -641,9 +666,13 @@ export async function triggerSync(userId: string) {
     }
   } catch (error) {
     console.error("Sync error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const needsAuth = error instanceof Error && 'needsAuth' in error ? (error as AuthError).needsAuth === true : false;
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: errorMessage,
+      needsAuth
     };
   }
 }
@@ -656,6 +685,26 @@ export async function triggerSync(userId: string) {
  */
 export async function triggerSyncAndAnalysis(userId: string) {
   try {
+    // Check if user has an active Meta connection first
+    const connections = await db
+      .select()
+      .from(metaConnections)
+      .where(
+        and(
+          eq(metaConnections.userId, userId),
+          eq(metaConnections.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (connections.length === 0) {
+      return {
+        success: false,
+        error: "Please connect your Meta account first to sync data",
+        step: "connection_check"
+      };
+    }
+
     // Step 1: Sync data
     const syncResult = await triggerSync(userId);
 
@@ -663,7 +712,8 @@ export async function triggerSyncAndAnalysis(userId: string) {
       return {
         success: false,
         error: syncResult.error,
-        step: "sync"
+        step: "sync",
+        needsAuth: syncResult.needsAuth || false
       };
     }
 
