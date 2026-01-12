@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "./client";
+import { getSupabaseClient } from "../client";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     const supabase = getSupabaseClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut: handleSignOut }}>
       {children}
     </AuthContext.Provider>
   );
