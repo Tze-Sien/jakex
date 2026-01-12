@@ -9,10 +9,18 @@ import {
 import { getLatestAIAnalysis } from "@/app/actions/ai-analysis";
 import { HeaderActions } from "@/components/dashboard/header-actions";
 import { AIAnalysisBox } from "@/components/dashboard/ai-analysis-box";
+import { getServerUser } from "@repo/auth/server";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  // TEMPORARY: Bypass authentication and use mock user ID
-  const userId = "00000000-0000-0000-0000-000000000000";
+  // Get the authenticated user
+  const user = await getServerUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const userId = user.id;
 
   // Get user's META connection
   const connection = await getMetaConnection(userId).catch((error) => {
@@ -20,15 +28,25 @@ export default async function DashboardPage() {
     return null;
   });
 
+  // Redirect to authorize-meta page if no connection exists
+  if (!connection) {
+    redirect("/authorize-meta");
+  }
+
+  // Get selected ad account from database
+  const selectedResult = await getUserSelectedAdAccount(userId).catch(() => ({ success: false, selectedAccountId: null }));
+  const selectedAccountId = selectedResult.success ? selectedResult.selectedAccountId : null;
+
+  // Redirect to select-account page if no account is selected
+  if (!selectedAccountId) {
+    redirect("/select-account");
+  }
+
   // Fetch all data from database (or empty arrays if no connection)
   const accounts = connection ? await getAdAccountsFromDatabase(connection.id).catch(() => []) : [];
   const campaigns = connection ? await getCampaignsFromDatabase(connection.id).catch(() => []) : [];
   const adSets = connection ? await getAdSetsFromDatabase(connection.id).catch(() => []) : [];
   const ads = connection ? await getAdsFromDatabase(connection.id).catch(() => []) : [];
-
-  // Get selected ad account from database
-  const selectedResult = connection ? await getUserSelectedAdAccount(userId).catch(() => ({ success: false, selectedAccountId: null })) : { success: false, selectedAccountId: null };
-  const selectedAccountId = selectedResult.success ? selectedResult.selectedAccountId : null;
 
   // Get last sync time from the most recent synced entity
   const allEntities = [...accounts, ...campaigns, ...adSets, ...ads];

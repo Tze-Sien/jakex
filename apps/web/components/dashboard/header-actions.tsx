@@ -7,6 +7,7 @@ import { LogoutButton } from "@/app/dashboard/components";
 import { AccountSelector } from "./account-selector";
 import { triggerSyncAndAnalysis } from "@/app/actions/sync";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@repo/auth";
 import type { AdAccount } from "@repo/database/schema";
 
 interface HeaderActionsProps {
@@ -21,16 +22,19 @@ export function HeaderActions({
   lastSyncTime,
 }: HeaderActionsProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const handleSync = async () => {
+    if (!user) return;
+
     setIsSyncing(true);
     setSyncMessage(null);
     setSyncMessage('✓ Syncing data and running AI analysis...');
 
     try {
-      const result = await triggerSyncAndAnalysis("00000000-0000-0000-0000-000000000000");
+      const result = await triggerSyncAndAnalysis(user.id);
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);
@@ -38,7 +42,19 @@ export function HeaderActions({
           router.refresh();
         }, 1000);
       } else {
-        if (result.step === 'analysis') {
+        // Check if token expired and needs re-authentication
+        if (result.needsAuth) {
+          setSyncMessage(`✗ Session expired. Redirecting to re-authenticate...`);
+          setTimeout(() => {
+            router.push('/authorize-meta');
+          }, 2000);
+        } else if (result.step === 'connection_check') {
+          // User doesn't have a Meta connection - redirect to authorize page
+          setSyncMessage(`✗ ${result.error}`);
+          setTimeout(() => {
+            router.push('/authorize-meta');
+          }, 2000);
+        } else if (result.step === 'analysis') {
           // Show the actual error message from analysis
           setSyncMessage(`✓ Sync completed. ✗ AI analysis failed: ${result.error || 'Unknown error'}`);
           console.error('AI Analysis error:', result.error);
