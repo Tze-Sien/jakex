@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto"
-import { GroqProvider } from "./providers"
+import { GroqProvider, type GroqProviderConfig } from "./providers"
 import { promptManager } from "./prompts"
 import { CircuitBreaker, RateLimiter, retryWithBackoff } from "./reliability"
 import { cacheManager } from "./cache"
 import { logger, metricsCollector } from "./observability"
-import type { AnalysisInput, AnalysisResult, LLMProvider } from "./types"
+import type { AnalysisInput, AnalysisResult } from "./types"
 
 export interface LLMClientConfig {
   groqApiKey: string
@@ -46,7 +46,7 @@ export class LLMClient {
     this.groqProvider = new GroqProvider({
       apiKey: this.config.groqApiKey,
       model: this.config.groqModel,
-    })
+    } as GroqProviderConfig)
 
     // Initialize circuit breaker
     this.circuitBreaker = new CircuitBreaker("groq-provider", {
@@ -78,11 +78,11 @@ export class LLMClient {
     // Validate input
     try {
       // Get account-level prompt
-      const promptTemplate = promptManager.getPrompt()
+      const systemPrompt = promptManager.getPrompt()
 
       // Check cache first (if enabled)
       if (this.config.enableCache) {
-        const cached = cacheManager.get(input, promptTemplate.version)
+        const cached = cacheManager.get(input, "v1.0.0")
         if (cached) {
           logger.info("Cache hit", { traceId, entityId: input.entityId })
           return cached
@@ -102,11 +102,11 @@ export class LLMClient {
       }
 
       // Execute with retry logic
-      const result = await this.executeWithRetry(input, promptTemplate.systemPrompt, traceId)
+      const result = await this.executeWithRetry(input, systemPrompt, traceId)
 
       // Store in cache
       if (this.config.enableCache) {
-        cacheManager.set(input, promptTemplate.version, result)
+        cacheManager.set(input, "v1.0.0", result)
       }
 
       // Record success metrics
@@ -203,7 +203,7 @@ export class LLMClient {
   /**
    * Get current provider
    */
-  getProvider(): LLMProvider {
+  getProvider(): "groq" {
     return this.groqProvider.getProviderName()
   }
 

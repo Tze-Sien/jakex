@@ -1,13 +1,32 @@
 import Groq from "groq-sdk"
-import { BaseProvider, type ProviderConfig } from "./base"
 import { AnalysisOutputSchema, LLMError, TimeoutError, type AnalysisInput, type AnalysisOutput } from "../types"
 
-export class GroqProvider extends BaseProvider {
-  private client: Groq
+export interface GroqProviderConfig {
+  apiKey: string
+  model?: string
+  maxTokens?: number
+  temperature?: number
+  timeout?: number
+}
 
-  constructor(config: ProviderConfig) {
-    super("groq", config)
-    this.client = new Groq({ apiKey: config.apiKey })
+/**
+ * Groq LLM Provider
+ *
+ * Handles all interactions with the Groq API for LLM inference
+ */
+export class GroqProvider {
+  private client: Groq
+  private config: Required<GroqProviderConfig>
+
+  constructor(config: GroqProviderConfig) {
+    this.config = {
+      model: "openai/gpt-oss-120b", // Default to Qwen for better Chinese language support
+      maxTokens: 4000, // Increased for Chinese language output which requires more tokens
+      temperature: 0.3, // Lower temperature for more consistent analysis
+      timeout: 30000, // 30 seconds
+      ...config,
+    }
+    this.client = new Groq({ apiKey: this.config.apiKey })
   }
 
   async execute(input: AnalysisInput, systemPrompt: string) {
@@ -25,7 +44,7 @@ export class GroqProvider extends BaseProvider {
           response_format: { type: "json_object" }, // Force JSON output
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new TimeoutError("groq", this.config.timeout!)), this.config.timeout)
+          setTimeout(() => reject(new TimeoutError("groq", this.config.timeout)), this.config.timeout)
         ),
       ])
 
@@ -73,7 +92,7 @@ export class GroqProvider extends BaseProvider {
     }
   }
 
-  protected formatInput(input: AnalysisInput, systemPrompt: string) {
+  private formatInput(input: AnalysisInput, systemPrompt: string) {
     const userMessage = this.buildUserMessage(input)
 
     return [
@@ -82,7 +101,7 @@ export class GroqProvider extends BaseProvider {
     ]
   }
 
-  protected parseResponse(response: string): AnalysisOutput {
+  private parseResponse(response: string): AnalysisOutput {
     try {
       const parsed = JSON.parse(response)
       return AnalysisOutputSchema.parse(parsed)
@@ -95,7 +114,7 @@ export class GroqProvider extends BaseProvider {
     }
   }
 
-  protected calculateCost(inputTokens: number, outputTokens: number): number {
+  private calculateCost(inputTokens: number, outputTokens: number): number {
     // Groq pricing (as of 2025): ~$0.27/M input tokens, ~$0.27/M output tokens for Llama 3.3 70B
     const INPUT_COST_PER_1M = 0.27
     const OUTPUT_COST_PER_1M = 0.27
@@ -117,6 +136,14 @@ export class GroqProvider extends BaseProvider {
     } catch {
       return false
     }
+  }
+
+  getProviderName(): "groq" {
+    return "groq"
+  }
+
+  getModel(): string {
+    return this.config.model
   }
 
   private buildUserMessage(input: AnalysisInput): string {
@@ -149,7 +176,7 @@ ${input.businessContext ? `**Business Context:**
 - Spend: $${(input.metrics.spend / 100).toFixed(2)}
 - Impressions: ${input.metrics.impressions.toLocaleString()}
 - Clicks: ${input.metrics.clicks.toLocaleString()}
-- CTR: ${(input.metrics.ctr * 100).toFixed(2)}%
+- CTR: ${input.metrics.ctr.toFixed(2)}%
 - CPC: $${(input.metrics.cpc / 100).toFixed(2)}
 - CPM: $${(input.metrics.cpm / 100).toFixed(2)}
 - Conversions: ${input.metrics.conversions}

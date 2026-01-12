@@ -1,16 +1,12 @@
 import { z } from "zod"
 
 // Provider types
-export type LLMProvider = "groq" | "gemini"
+export type LLMProvider = "groq"
 
-export type LLMModel = {
-  groq:
-    | "openai/gpt-oss-120b"
-    | "llama-3.1-8b-instant"
-    | "openai/gpt-oss-120b"
-    | "qwen/qwen-2.5-32b-instruct"
-  gemini: "gemini-2.0-flash-exp" | "gemini-1.5-pro-latest"
-}
+export type LLMModel =
+  | "openai/gpt-oss-120b"
+  | "llama-3.1-8b-instant"
+  | "qwen/qwen-2.5-32b-instruct"
 
 // Input/Output schemas
 export const AnalysisInputSchema = z.object({

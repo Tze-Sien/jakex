@@ -1,2 +1,1 @@
-export { BaseProvider, type ProviderConfig } from "./base"
-export { GroqProvider } from "./groq"
+export { GroqProvider, type GroqProviderConfig } from "./groq"
