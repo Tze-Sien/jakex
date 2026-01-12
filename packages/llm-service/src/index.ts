@@ -1,19 +1,34 @@
 /**
- * @repo/llm-service - LLM service abstraction for Meta Ads analysis
+ * @repo/llm-service - General-purpose LLM service abstraction
  *
- * This package provides:
- * - LLM client for ad performance analysis
- * - Type definitions for analysis input/output
+ * Provides infrastructure for LLM completions:
+ * - Provider management (Groq, OpenAI, etc.)
+ * - Reliability patterns (circuit breaker, retry, rate limiting)
+ * - Caching
+ * - Observability (metrics, logging)
+ *
+ * Application layer should provide:
+ * - System prompts
+ * - User message formatting
+ * - Output schemas
  */
 
 // Main client
 export { LLMClient, type LLMClientConfig } from "./client"
 
-// Types
+// Generic types
 export type {
-  AnalysisInput,
-  AnalysisOutput,
-  AnalysisResult,
-  Recommendation,
-  LLMResponseMetadata,
+  CompletionRequest,
+  CompletionResult,
+  ResponseMetadata,
+  LLMProvider,
+  LLMModel,
+} from "./types"
+
+// Error types
+export {
+  LLMError,
+  RateLimitError,
+  TimeoutError,
+  ValidationError,
 } from "./types"

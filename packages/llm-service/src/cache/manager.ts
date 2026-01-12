@@ -1,15 +1,12 @@
 /**
- * Analysis cache to reduce redundant LLM calls
+ * Generic cache for LLM completions
  *
- * Best Practice: Cache similar analyses for 1 hour to reduce costs
- * Cache key = hash(entityId + dataRangeStart + dataRangeEnd + promptVersion)
+ * Caches completion results to reduce redundant LLM calls and costs
+ * Cache key provided by caller (usually hash of input data)
  */
 
-import { createHash } from "crypto"
-import type { AnalysisInput, AnalysisResult } from "../types"
-
 export class CacheManager {
-  private cache: Map<string, { result: AnalysisResult; expiresAt: number }> = new Map()
+  private cache: Map<string, { result: unknown; expiresAt: number }> = new Map()
   private ttlMs: number
   private cleanupTimer?: ReturnType<typeof setInterval>
 
@@ -20,53 +17,37 @@ export class CacheManager {
   }
 
   /**
-   * Generate cache key from input
-   */
-  private getCacheKey(input: AnalysisInput, promptVersion: string): string {
-    const keyData = {
-      entityId: input.entityId,
-      dataRangeStart: input.dataRangeStart,
-      dataRangeEnd: input.dataRangeEnd,
-      promptVersion,
-    }
-
-    return createHash("sha256").update(JSON.stringify(keyData)).digest("hex")
-  }
-
-  /**
    * Get cached result if available and not expired
    */
-  get(input: AnalysisInput, promptVersion: string): AnalysisResult | null {
-    const key = this.getCacheKey(input, promptVersion)
-    const cached = this.cache.get(key)
+  get(cacheKey: string): unknown | null {
+    const cached = this.cache.get(cacheKey)
 
     if (!cached) return null
 
     if (Date.now() > cached.expiresAt) {
-      this.cache.delete(key)
+      this.cache.delete(cacheKey)
       return null
     }
 
-    console.log(`[Cache] HIT for ${input.entityType}:${input.entityId}`)
+    console.log(`[Cache] HIT for key: ${cacheKey.substring(0, 8)}...`)
     return cached.result
   }
 
   /**
    * Store result in cache
    */
-  set(input: AnalysisInput, promptVersion: string, result: AnalysisResult) {
-    const key = this.getCacheKey(input, promptVersion)
-    this.cache.set(key, {
+  set(cacheKey: string, result: unknown): void {
+    this.cache.set(cacheKey, {
       result,
       expiresAt: Date.now() + this.ttlMs,
     })
-    console.log(`[Cache] SET for ${input.entityType}:${input.entityId}`)
+    console.log(`[Cache] SET for key: ${cacheKey.substring(0, 8)}...`)
   }
 
   /**
-   * Clear all cached entries
+   * Clear entire cache
    */
-  clear() {
+  clear(): void {
     this.cache.clear()
   }
 
@@ -74,36 +55,46 @@ export class CacheManager {
    * Get cache statistics
    */
   getStats() {
-    const now = Date.now()
-    const validEntries = Array.from(this.cache.values()).filter((entry) => now <= entry.expiresAt)
-
     return {
-      totalEntries: this.cache.size,
-      validEntries: validEntries.length,
-      expiredEntries: this.cache.size - validEntries.length,
+      size: this.cache.size,
+      ttlMs: this.ttlMs,
     }
   }
 
   /**
-   * Periodic cleanup of expired entries
+   * Start background cleanup of expired entries
    */
   private startCleanup() {
+    // Run cleanup every 5 minutes
     this.cleanupTimer = setInterval(() => {
       const now = Date.now()
-      for (const [key, entry] of this.cache.entries()) {
-        if (now > entry.expiresAt) {
+      let expiredCount = 0
+
+      for (const [key, value] of this.cache.entries()) {
+        if (now > value.expiresAt) {
           this.cache.delete(key)
+          expiredCount++
         }
       }
-    }, 300000) // Clean every 5 minutes
+
+      if (expiredCount > 0) {
+        console.log(`[Cache] Cleaned up ${expiredCount} expired entries`)
+      }
+    }, 300000) // 5 minutes
+
+    // Ensure timer doesn't prevent process exit
+    if (this.cleanupTimer.unref) {
+      this.cleanupTimer.unref()
+    }
   }
 
   /**
-   * Stop the cache manager
+   * Stop background cleanup (for testing or shutdown)
    */
-  stop() {
+  stopCleanup() {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer)
+      this.cleanupTimer = undefined
     }
   }
 }

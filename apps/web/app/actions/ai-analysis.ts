@@ -11,6 +11,7 @@ import {
 } from "@repo/database/schema";
 import { eq, desc } from "drizzle-orm";
 import { LLMClient } from "@repo/llm-service";
+import { MetaAdsAnalysisClient } from "@/lib/llm/meta-ads/client";
 
 /**
  * Performs AI analysis on synced ad data
@@ -147,7 +148,7 @@ export async function performAIAnalysis(reportId: string, userId: string) {
       })),
     };
 
-    // Initialize LLM Client with Qwen for better Chinese language support
+    // Initialize generic LLM Client
     const llmClient = new LLMClient({
       groqApiKey,
       groqModel: "openai/gpt-oss-120b", // Qwen excels at Mandarin Chinese output
@@ -156,20 +157,14 @@ export async function performAIAnalysis(reportId: string, userId: string) {
       enableRateLimiting: true,
     });
 
-    // Build prompt for account-level analysis
-    const prompt = buildAccountAnalysisPrompt(analysisInput);
+    // Initialize Meta Ads-specific client wrapper with prompt version
+    const metaAdsClient = new MetaAdsAnalysisClient(llmClient, "v1.0.0");
 
-    // Call LLM for analysis (using account-level prompt)
-    // Note: The LLMClient.analyze() expects a specific input format,
-    // so we'll need to adapt our comprehensive data
-    const startTime = Date.now();
-
-    // For now, we'll create a simplified input that matches the expected format
     // Use the "last_7d" data as the primary metrics
     const primaryMetrics = analysisData.last_7d;
     const previousMetrics = analysisData.last_3d; // Use as comparison
 
-    // Create a pseudo-entity for account-level analysis
+    // Create analysis input for Meta Ads client
     const llmInput = {
       entityType: "campaign" as const, // Use campaign type for account-level
       entityId: reportId, // Use report ID as pseudo-entity
@@ -200,8 +195,8 @@ export async function performAIAnalysis(reportId: string, userId: string) {
       },
     };
 
-    const analysisResult = await llmClient.analyze(llmInput);
-    const latencyMs = Date.now() - startTime;
+    // Call Meta Ads-specific analyzer
+    const analysisResult = await metaAdsClient.analyze(llmInput);
 
     // Store analysis in database
     const [aiAnalysis] = await db

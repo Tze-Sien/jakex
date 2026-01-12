@@ -1,10 +1,9 @@
-import { randomUUID } from "crypto"
+import { randomUUID, createHash } from "crypto"
 import { GroqProvider, type GroqProviderConfig } from "./providers"
-import { promptManager } from "./prompts"
 import { CircuitBreaker, RateLimiter, retryWithBackoff } from "./reliability"
 import { cacheManager } from "./cache"
 import { logger, metricsCollector } from "./observability"
-import type { AnalysisInput, AnalysisResult } from "./types"
+import type { CompletionRequest, CompletionResult } from "./types"
 
 export interface LLMClientConfig {
   groqApiKey: string
@@ -16,15 +15,18 @@ export interface LLMClientConfig {
 }
 
 /**
- * Main LLM Client Orchestrator
+ * Generic LLM Client
  *
- * Responsibilities:
- * - Provider selection and failover
- * - Request orchestration with retry logic
- * - Cache management
- * - Circuit breaker integration
- * - Rate limiting
- * - Observability (logging, metrics)
+ * Provides infrastructure for LLM completions:
+ * - Provider management (currently Groq only)
+ * - Reliability patterns (circuit breaker, retry, rate limiting)
+ * - Caching
+ * - Observability (metrics, logging)
+ *
+ * Application layer should provide:
+ * - System prompts
+ * - User message formatting
+ * - Output schemas
  */
 export class LLMClient {
   private groqProvider: GroqProvider
@@ -65,27 +67,29 @@ export class LLMClient {
   }
 
   /**
-   * Analyze ad account performance (holistic account-level analysis)
+   * Generic LLM completion with reliability patterns
+   *
+   * @param request - Completion request with system prompt, user message, and output schema
+   * @returns Completion result with parsed output and metadata
    */
-  async analyze(input: AnalysisInput): Promise<AnalysisResult> {
+  async complete<TOutput>(
+    request: CompletionRequest<TOutput>
+  ): Promise<CompletionResult<TOutput>> {
     const traceId = randomUUID()
 
-    logger.info("Starting account analysis", {
+    logger.info("Starting LLM completion", {
       traceId,
-      reportId: input.reportId,
+      cacheKey: request.cacheKey,
     })
 
-    // Validate input
     try {
-      // Get account-level prompt
-      const systemPrompt = promptManager.getPrompt()
-
       // Check cache first (if enabled)
       if (this.config.enableCache) {
-        const cached = cacheManager.get(input, "v1.0.0")
+        const cacheKey = request.cacheKey ?? this.generateCacheKey(request)
+        const cached = cacheManager.get(cacheKey)
         if (cached) {
-          logger.info("Cache hit", { traceId, entityId: input.entityId })
-          return cached
+          logger.info("Cache hit", { traceId, cacheKey })
+          return cached as CompletionResult<TOutput>
         }
       }
 
@@ -102,11 +106,12 @@ export class LLMClient {
       }
 
       // Execute with retry logic
-      const result = await this.executeWithRetry(input, systemPrompt, traceId)
+      const result = await this.executeWithRetry(request, traceId)
 
       // Store in cache
       if (this.config.enableCache) {
-        cacheManager.set(input, "v1.0.0", result)
+        const cacheKey = request.cacheKey ?? this.generateCacheKey(request)
+        cacheManager.set(cacheKey, result)
       }
 
       // Record success metrics
@@ -124,7 +129,7 @@ export class LLMClient {
         this.circuitBreaker.recordSuccess()
       }
 
-      logger.info("Analysis completed successfully", {
+      logger.info("Completion completed successfully", {
         traceId,
         provider: result.metadata.provider,
         latencyMs: result.metadata.latencyMs,
@@ -146,31 +151,39 @@ export class LLMClient {
         errorCode: error instanceof Error ? error.message : "UNKNOWN",
       })
 
-      logger.error("Analysis failed", { traceId, entityId: input.entityId }, error as Error)
+      logger.error("Completion failed", { traceId }, error as Error)
       throw error
     }
   }
 
   /**
-   * Execute analysis with retry logic
+   * Execute completion with retry logic
    */
-  private async executeWithRetry(
-    input: AnalysisInput,
-    systemPrompt: string,
+  private async executeWithRetry<TOutput>(
+    request: CompletionRequest<TOutput>,
     traceId: string
-  ): Promise<AnalysisResult> {
+  ): Promise<CompletionResult<TOutput>> {
     let attemptNumber = 0
 
     const result = await retryWithBackoff(
       async () => {
         attemptNumber++
-        logger.info("Executing analysis", {
+        logger.info("Executing completion", {
           traceId,
           provider: "groq",
           attemptNumber,
         })
 
-        const response = await this.groqProvider.execute(input, systemPrompt)
+        const response = await this.groqProvider.execute(
+          request.systemPrompt,
+          request.userMessage,
+          request.outputSchema,
+          {
+            temperature: request.temperature,
+            maxTokens: request.maxTokens,
+            timeout: request.timeout,
+          }
+        )
 
         return {
           output: response.output,
@@ -198,6 +211,14 @@ export class LLMClient {
     )
 
     return result
+  }
+
+  /**
+   * Generate cache key from request
+   */
+  private generateCacheKey(request: CompletionRequest<unknown>): string {
+    const data = `${request.systemPrompt}:${request.userMessage}`
+    return createHash("sha256").update(data).digest("hex")
   }
 
   /**
