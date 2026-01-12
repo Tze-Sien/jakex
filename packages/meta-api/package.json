@@ -4,6 +4,7 @@
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "dependencies": {
+        "@repo/shared": "workspace:*",
         "facebook-nodejs-business-sdk": "^24.0.1",
         "zod": "^3.22.4"
     },

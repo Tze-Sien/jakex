@@ -3,16 +3,8 @@
  * Based on SDK version: 24.0.1
  *
  * These interfaces mirror the exact field structure and enums from the official META SDK
- * to ensure type safety and compatibility between mock and real API responses.
+ * to ensure type safety and compatibility with API responses.
  */
-
-import {
-  AdAccount,
-  Campaign,
-  AdSet,
-  Ad,
-  AdsInsights
-} from 'facebook-nodejs-business-sdk';
 
 // =============================================================================
 // ENUMS - Matching SDK Static Properties
@@ -911,11 +903,5 @@ export interface MetaErrorResponse {
 // TYPE EXPORTS
 // =============================================================================
 
-// Re-export SDK types for convenience
-export type {
-  AdAccount,
-  Campaign,
-  AdSet,
-  Ad,
-  AdsInsights
-};
+// Note: SDK types (AdAccount, Campaign, AdSet, Ad, AdsInsights) are available
+// directly from 'facebook-nodejs-business-sdk' - import them from there if needed
