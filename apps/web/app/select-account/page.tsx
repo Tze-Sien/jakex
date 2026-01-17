@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AnimatedBackground } from "../(auth)/login/components/AnimatedBackground";
+import { AnimatedBackground } from "../(auth)/AnimatedBackground";
 import { AccountCard, SelectAccountHero } from "./components";
 import { loadUserAdAccounts, saveUserSelectedAdAccounts } from "@/lib/actions/meta";
 

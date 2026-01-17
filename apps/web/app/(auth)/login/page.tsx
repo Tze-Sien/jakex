@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { signInWithEmail, signInWithGoogle } from "@repo/auth";
-import {
-  AnimatedBackground,
-  HeroSection,
-} from "./components";
-import { UnifiedLoginForm } from "./components/UnifiedLoginForm";
+import { LoginForm } from "./LoginForm";
+import { AnimatedBackground } from "../AnimatedBackground";
+import { HeroSection } from "../HeroSection";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -109,7 +107,7 @@ export default function LoginPage() {
                     )}
 
                     {/* Unified Login Form */}
-                    <UnifiedLoginForm
+                    <LoginForm
                       onEmailLogin={handleEmailLogin}
                       onOAuthLogin={handleOAuthLogin}
                       isLoading={isLoading}
@@ -198,7 +196,7 @@ export default function LoginPage() {
 
               {/* Card */}
               <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-3xl p-8 shadow-lg">
-                <UnifiedLoginForm
+                <LoginForm
                   onEmailLogin={handleEmailLogin}
                   onOAuthLogin={handleOAuthLogin}
                   isLoading={isLoading}

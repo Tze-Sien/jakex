@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { resetPasswordForEmail } from "@repo/auth";
-import { AnimatedBackground } from "../(auth)/login/components";
+import { AnimatedBackground } from "../AnimatedBackground";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");

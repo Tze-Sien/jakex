@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { updatePassword } from "@repo/auth";
-import { AnimatedBackground } from "../(auth)/login/components";
+
 import { useRouter } from "next/navigation";
+import { AnimatedBackground } from "../AnimatedBackground";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function ResetPasswordPage() {
       try {
         // If we can get here and there's a valid session, we're good
         setHasToken(true);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         setError("Invalid or missing reset token. Please request a new password reset link.");
       }

@@ -4,11 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signUpWithEmail, signInWithGoogle } from "@repo/auth";
 import { Button } from "@/components/ui/button";
-import {
-  AnimatedBackground,
-  HeroSection,
-} from "../login/components";
-import { UnifiedSignUpForm } from "./components/UnifiedSignUpForm";
+import { UnifiedSignUpForm } from "./SignUpForm";
+import { AnimatedBackground } from "../AnimatedBackground";
+import { HeroSection } from "../HeroSection";
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);

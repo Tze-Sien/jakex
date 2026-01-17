@@ -10,7 +10,7 @@ import {
   Database,
   Sparkles,
 } from "lucide-react";
-import { AnimatedBackground } from "../(auth)/login/components/AnimatedBackground";
+import { AnimatedBackground } from "../(auth)/AnimatedBackground";
 import { ProgressStep } from "./components";
 
 type StepStatus = "pending" | "loading" | "completed";
