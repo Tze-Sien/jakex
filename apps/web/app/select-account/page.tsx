@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { AnimatedBackground } from "../(auth)/AnimatedBackground";
 import { AccountCard, SelectAccountHero } from "./components";
@@ -108,7 +109,7 @@ export default function SelectAccountPage() {
                   </div>
 
                   {/* Accounts List */}
-                  <div className="space-y-3 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-3 mb-6 max-h-100 overflow-y-auto pr-2 custom-scrollbar">
                     {isLoadingAccounts ? (
                       <div className="text-center py-8">
                         <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
@@ -198,21 +199,13 @@ export default function SelectAccountPage() {
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-linear-to-br from-primary to-chart-2">
-                <svg
-                  className="w-6 h-6 text-primary-foreground"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="JakeX Logo"
+                width={40}
+                height={40}
+                className="rounded-xl"
+              />
               <h1 className="text-xl font-bold">JakeX</h1>
             </div>
 

@@ -17,6 +17,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  title: "JakeX - AI-Powered Ad Analytics",
+  description: "Analyze and optimize your Meta ad campaigns with AI-powered insights",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
