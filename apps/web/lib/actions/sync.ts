@@ -24,14 +24,14 @@ interface AuthError extends Error {
  * Syncs all data for a specific ad account from Meta API to the database
  * This includes campaigns, ad sets, ads, and insights
  *
- * @param userId - The user's ID
+ * @param profileId - The user's profile ID (internal DB ID, not Supabase user ID)
  * @param connectionId - The META connection ID
  * @param adAccountId - The META ad account ID (e.g., "act_123456")
  * @param accessToken - The META access token
  * @returns Object containing sync results and any errors
  */
 export async function syncAdAccountData(
-  userId: string,
+  profileId: string,
   connectionId: string,
   adAccountId: string,
   accessToken: string
@@ -264,7 +264,7 @@ export async function syncAdAccountData(
     const [report] = await db
       .insert(reports)
       .values({
-        userId,
+        userId: profileId,
         adAccountId: adAccount.id,
         status: "active",
       })
@@ -515,7 +515,7 @@ export async function syncAdAccountData(
       reportId: report.id,
       totalSynced,
       errors,
-      userId, // Return userId for AI analysis
+      profileId, // Return profileId for AI analysis
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -610,16 +610,15 @@ export async function triggerSync() {
   if (!auth.success) {
     return { success: false, error: auth.error };
   }
-  const userId = auth.user.id;
 
   try {
-    // Get the user's META connection
+    // Get the user's META connection (profile.id = auth.users.id)
     const connections = await db
       .select()
       .from(metaConnections)
       .where(
         and(
-          eq(metaConnections.userId, userId),
+          eq(metaConnections.userId, auth.user.id),
           eq(metaConnections.status, "active")
         )
       )
@@ -652,7 +651,7 @@ export async function triggerSync() {
 
     // Sync the data
     const result = await syncAdAccountData(
-      userId,
+      profileId,
       connection.id,
       adAccount.metaAdAccountId,
       connection.accessToken
@@ -695,16 +694,15 @@ export async function triggerSyncAndAnalysis() {
   if (!auth.success) {
     return { success: false, error: auth.error, step: "auth" };
   }
-  const userId = auth.user.id;
 
   try {
-    // Check if user has an active Meta connection first
+    // Check if user has an active Meta connection first (profile.id = auth.users.id)
     const connections = await db
       .select()
       .from(metaConnections)
       .where(
         and(
-          eq(metaConnections.userId, userId),
+          eq(metaConnections.userId, auth.user.id),
           eq(metaConnections.status, "active")
         )
       )
@@ -733,10 +731,10 @@ export async function triggerSyncAndAnalysis() {
     // Import AI analysis function dynamically to avoid circular dependencies
     const { performAIAnalysis } = await import("./ai-analysis");
 
-    // Step 2: Perform AI analysis
+    // Step 2: Perform AI analysis (profileId is used for foreign key)
     const analysisResult = await performAIAnalysis(
       syncResult.reportId!,
-      userId
+      profileId
     );
 
     if (!analysisResult.success) {

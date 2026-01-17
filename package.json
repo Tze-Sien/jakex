@@ -36,6 +36,7 @@
     "packages/*"
   ],
   "dependencies": {
-    "@supabase/ssr": "^0.8.0"
+    "@supabase/ssr": "^0.8.0",
+    "sonner": "^2.0.7"
   }
 }

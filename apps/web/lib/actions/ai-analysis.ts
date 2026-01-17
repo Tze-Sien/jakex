@@ -213,7 +213,7 @@ export async function getAIAnalysis(reportId: string) {
     return null;
   }
 
-  // Verify report belongs to user
+  // Verify report belongs to user (profile.id = auth.users.id)
   const [report] = await db
     .select()
     .from(reports)
@@ -244,6 +244,7 @@ export async function getLatestAIAnalysis() {
     return null;
   }
 
+  // profile.id = auth.users.id
   const [analysis] = await db
     .select()
     .from(aiAnalyses)

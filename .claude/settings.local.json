@@ -1,6 +1,18 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__shadcn__search_items_in_registries",
+      "mcp__shadcn__get_item_examples_from_registries",
+      "mcp__shadcn__view_items_in_registries",
+      "mcp__shadcn__get_add_command_for_items",
+      "mcp__shadcn__get_project_registries",
+      "Bash(ls:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:gCjDjprU9Ngu9AEh@db.xfquuzshyjmnysjewmoa.supabase.co:5432/postgres\" npx tsx:*)",
+      "Bash(npx shadcn@latest add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "shadcn"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

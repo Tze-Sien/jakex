@@ -10,14 +10,17 @@ import {
   decimal,
   uniqueIndex,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey().notNull(),
+  id: uuid("id").primaryKey().notNull(), // Same as auth.users.id from Supabase
   email: text("email"),
   fullName: text("full_name"),
   avatarUrl: text("avatar_url"),
+  status: text("status").default("active").notNull(), // 'active' | 'deactivated' | 'archived'
+  archivedAt: timestamp("archived_at", { withTimezone: true }), // When the account was archived/deleted
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
@@ -62,6 +65,7 @@ export const adAccounts = pgTable(
     currency: text("currency"),
     timezone: text("timezone"),
     accountStatus: integer("account_status"),
+    isActive: boolean("is_active").default(true).notNull(), // User can deactivate accounts in settings
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -367,6 +371,7 @@ export const adsRelations = relations(ads, ({ one }) => ({
 }));
 
 // Inferred types for queries
+export type Profile = typeof profiles.$inferSelect;
 export type AdAccount = typeof adAccounts.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type AdSet = typeof adSets.$inferSelect;

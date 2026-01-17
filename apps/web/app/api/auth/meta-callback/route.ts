@@ -9,6 +9,23 @@ function getBaseUrl(requestOrigin: string): string {
   return process.env.NEXT_PUBLIC_APP_URL || requestOrigin;
 }
 
+// Parse state parameter to extract redirect URL if present
+function parseStateForRedirect(state: string | null): string | null {
+  if (!state) return null;
+  try {
+    const parsed = JSON.parse(state);
+    if (parsed && typeof parsed.r === "string") {
+      // Validate it's a relative path to prevent open redirects
+      if (parsed.r.startsWith("/") && !parsed.r.startsWith("//")) {
+        return parsed.r;
+      }
+    }
+  } catch {
+    // State is not JSON, just a plain random string
+  }
+  return null;
+}
+
 /**
  * Meta OAuth Callback Handler
  * This endpoint handles the OAuth callback from Facebook/Meta
@@ -18,8 +35,12 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const baseUrl = getBaseUrl(requestUrl.origin);
   const code = requestUrl.searchParams.get("code");
+  const state = requestUrl.searchParams.get("state");
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
+
+  // Extract custom redirect from state if present
+  const customRedirect = parseStateForRedirect(state);
 
   // Handle OAuth errors from Meta
   if (error) {
@@ -82,8 +103,13 @@ export async function GET(request: Request) {
       ],
     });
 
-    // Check if user already has selected accounts
-    const selectedAccountResult = await getUserSelectedAdAccount(user.id);
+    // If a custom redirect was provided (e.g., from settings page), use it
+    if (customRedirect) {
+      return NextResponse.redirect(new URL(customRedirect, baseUrl));
+    }
+
+    // Check if user already has selected accounts (profile.id = auth.users.id)
+    const selectedAccountResult = await getUserSelectedAdAccount();
 
     // If user already has selected accounts, redirect to dashboard
     // Otherwise, redirect to account selection page

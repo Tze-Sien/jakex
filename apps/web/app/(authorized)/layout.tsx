@@ -1,23 +1,22 @@
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
+import { getUserProfile } from "@/lib/actions/profile"
+import { PageHeader } from "@/components/page-header"
 
-export default function AuthorizedLayout({
+export default async function AuthorizedLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Fetch user profile for sidebar
+  const profileResult = await getUserProfile()
+  const profile = profileResult.success ? profileResult.profile : null
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar profile={profile} />
       <SidebarInset>
-        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-6" />
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Dashboard</span>
-          </div>
-        </header>
+        <PageHeader />
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
           {children}
         </main>

@@ -1,6 +1,7 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Creates a Supabase client for Server Components (App Router).
@@ -160,6 +161,41 @@ export async function withAuth(): Promise<
     return { success: false, error: "Unauthorized - Authentication required" };
   }
   return { success: true, user };
+}
+
+/**
+ * Creates a Supabase Admin client with service role privileges.
+ * IMPORTANT: Only use this for admin operations like deleting users.
+ * Never expose this client or its operations to the frontend.
+ *
+ * Requires SUPABASE_SERVICE_ROLE_KEY environment variable.
+ *
+ * Usage:
+ * ```tsx
+ * import { createAdminSupabaseClient } from "@repo/auth/server";
+ *
+ * // Delete a user from Supabase Auth
+ * const adminClient = createAdminSupabaseClient();
+ * await adminClient.auth.admin.deleteUser(userId);
+ * ```
+ */
+export function createAdminSupabaseClient(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_KEY environment variable. " +
+        "This is required for admin operations like deleting users."
+    );
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 // Re-export types

@@ -1,6 +1,7 @@
 import './globals.css'
 import { Inter } from "next/font/google";
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -39,6 +40,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className={`antialiased`}>
         {children}
+        <Toaster position="top-center" />
       </body>
     </html>
   );

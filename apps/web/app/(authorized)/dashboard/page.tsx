@@ -12,6 +12,8 @@ import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 import { HeaderActions } from "./components/header-actions";
 import { AIAnalysisBox } from "./components/ai-analysis-box";
+import { ConnectMetaCard } from "./components/connect-meta-card";
+import { SelectAccountCard } from "./components/select-account-card";
 
 export default async function DashboardPage() {
   // Get the authenticated user
@@ -22,6 +24,7 @@ export default async function DashboardPage() {
   }
 
   const userId = user.id;
+  console.log(userId);
 
   // Get user's META connection
   const connection = await getMetaConnection(userId).catch((error) => {
@@ -29,19 +32,9 @@ export default async function DashboardPage() {
     return null;
   });
 
-  // Redirect to authorize-meta page if no connection exists
-  if (!connection) {
-    redirect(ROUTES.AUTHORIZE_META);
-  }
-
   // Get selected ad account from database
-  const selectedResult = await getUserSelectedAdAccount(userId).catch(() => ({ success: false, selectedAccountId: null }));
+  const selectedResult = await getUserSelectedAdAccount().catch(() => ({ success: false, selectedAccountId: null }));
   const selectedAccountId = selectedResult.success ? selectedResult.selectedAccountId : null;
-
-  // Redirect to select-account page if no account is selected
-  if (!selectedAccountId) {
-    redirect(ROUTES.SELECT_ACCOUNT);
-  }
 
   // Fetch all data from database (or empty arrays if no connection)
   const accounts = connection ? await getAdAccountsFromDatabase(connection.id).catch(() => []) : [];
@@ -73,7 +66,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground text-sm">
-            Welcome back! Here's an overview of your ad performance.
+            Welcome back! Here&apos;s an overview of your ad performance.
           </p>
         </div>
         <HeaderActions
@@ -101,11 +94,18 @@ export default async function DashboardPage() {
       {/* AI Analysis Box */}
       <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
 
-      {/* Placeholder for future content */}
-      <div className="text-center text-muted-foreground py-12">
-        <p>Dashboard content coming soon...</p>
-        <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
-      </div>
+      {/* Show appropriate card based on connection and account selection status */}
+      {!connection ? (
+        <ConnectMetaCard />
+      ) : !selectedAccountId ? (
+        <SelectAccountCard />
+      ) : (
+        /* Placeholder for future content */
+        <div className="text-center text-muted-foreground py-12">
+          <p>Dashboard content coming soon...</p>
+          <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
+        </div>
+      )}
     </>
   );
 }

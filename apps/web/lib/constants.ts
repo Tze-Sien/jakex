@@ -14,6 +14,9 @@ export const ROUTES = {
   
   // Protected routes
   DASHBOARD: "/dashboard",
+  ANALYTICS: "/analytics",
+  PROFILE: "/profile",
+  SETTINGS: "/settings",
   AUTHORIZE_META: "/authorize-meta",
   SELECT_ACCOUNT: "/select-account",
   
