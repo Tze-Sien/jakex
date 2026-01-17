@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createOrUpdateMetaConnection } from "@/app/actions/meta";
+import { createOrUpdateMetaConnection } from "@/lib/actions/meta";
 import { getServerUser } from "@repo/auth/server";
 import { exchangeCodeForToken, getLongLivedToken, getMetaUserInfo } from "@repo/meta-api";
 

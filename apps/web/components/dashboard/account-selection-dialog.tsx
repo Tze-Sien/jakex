@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { setUserSelectedAdAccount } from "@/app/actions/meta";
+import { setUserSelectedAdAccount } from "@/lib/actions/meta";
 import type { AdAccount } from "@repo/database/schema";
 
 interface AccountSelectionDialogProps {

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AnimatedBackground } from "../login/components/AnimatedBackground";
 import { AccountCard, SelectAccountHero } from "./components";
-import { loadUserAdAccounts, saveUserSelectedAdAccounts } from "@/app/actions/meta";
+import { loadUserAdAccounts, saveUserSelectedAdAccounts } from "@/lib/actions/meta";
 
 export default function SelectAccountPage() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);

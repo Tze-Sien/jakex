@@ -5,7 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/app/dashboard/components";
 import { AccountSelector } from "./account-selector";
-import { triggerSyncAndAnalysis } from "@/app/actions/sync";
+import { triggerSyncAndAnalysis } from "@/lib/actions/sync";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import type { AdAccount } from "@repo/database/schema";
@@ -72,7 +72,7 @@ export function HeaderActions({
   };
 
   const handleAccountChange = async (accountId: string) => {
-    const { setUserSelectedAdAccount } = await import("@/app/actions/meta");
+    const { setUserSelectedAdAccount } = await import("@/lib/actions/meta");
     await setUserSelectedAdAccount(accountId);
     router.refresh();
   };

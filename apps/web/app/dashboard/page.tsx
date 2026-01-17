@@ -5,8 +5,8 @@ import {
   getAdSetsFromDatabase,
   getAdsFromDatabase,
   getUserSelectedAdAccount,
-} from "@/app/actions/meta";
-import { getLatestAIAnalysis } from "@/app/actions/ai-analysis";
+} from "@/lib/actions/meta";
+import { getLatestAIAnalysis } from "@/lib/actions/ai-analysis";
 import { HeaderActions } from "@/components/dashboard/header-actions";
 import { AIAnalysisBox } from "@/components/dashboard/ai-analysis-box";
 import { getServerUser } from "@repo/auth/server";

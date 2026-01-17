@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/app/dashboard/components";
-import { triggerSyncAndAnalysis } from "@/app/actions/sync";
+import { triggerSyncAndAnalysis } from "@/lib/actions/sync";
 import { useRouter } from "next/navigation";
 import { DataTable } from "./data-table";
 import { AccountSelector } from "./account-selector";
@@ -171,7 +171,7 @@ export function DashboardClient({
   const handleAccountChange = async (accountId: string) => {
     setSelectedAccountId(accountId);
     // Save to database
-    const { setUserSelectedAdAccount } = await import("@/app/actions/meta");
+    const { setUserSelectedAdAccount } = await import("@/lib/actions/meta");
     await setUserSelectedAdAccount(accountId);
   };
 
