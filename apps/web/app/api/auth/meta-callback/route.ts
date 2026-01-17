@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createOrUpdateMetaConnection } from "@/lib/actions/meta";
+import { createOrUpdateMetaConnection, getUserSelectedAdAccount } from "@/lib/actions/meta";
 import { getServerUser } from "@repo/auth/server";
 import { exchangeCodeForToken, getLongLivedToken, getMetaUserInfo } from "@repo/meta-api";
 
@@ -81,8 +81,16 @@ export async function GET(request: Request) {
       ],
     });
 
-    // Redirect to account selection page
-    return NextResponse.redirect(new URL("/select-account", baseUrl));
+    // Check if user already has selected accounts
+    const selectedAccountResult = await getUserSelectedAdAccount(user.id);
+
+    // If user already has selected accounts, redirect to dashboard
+    // Otherwise, redirect to account selection page
+    const redirectPath = selectedAccountResult.success && selectedAccountResult.selectedAccountId
+      ? "/dashboard"
+      : "/select-account";
+
+    return NextResponse.redirect(new URL(redirectPath, baseUrl));
   } catch (error) {
     console.error("Error processing Meta OAuth callback:", error);
     return NextResponse.redirect(
