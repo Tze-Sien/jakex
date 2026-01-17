@@ -2,9 +2,7 @@
     "name": "@repo/auth",
     "version": "0.0.0",
     "private": true,
-    "main": "./dist/index.js",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
+    "type": "module",
     "exports": {
         ".": "./src/index.ts",
         "./client": "./src/client.ts",
@@ -12,8 +10,6 @@
         "./server": "./src/server.ts"
     },
     "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
         "lint": "eslint . --max-warnings 0",
         "check-types": "tsc --noEmit"
     },
@@ -25,7 +21,6 @@
     "devDependencies": {
         "@repo/typescript-config": "*",
         "@types/node": "^22.15.3",
-        "tsup": "^8.4.0",
         "typescript": "5.9.2"
     }
 }
