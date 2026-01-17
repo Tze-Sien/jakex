@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "../client";
+import { getSupabaseClient } from "@repo/auth/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  *
  * Usage in app/layout.tsx:
  * ```tsx
- * import { AuthProvider } from "@repo/auth/AuthProvider";
+ * import { AuthProvider } from "@/lib/auth/AuthProvider";
  *
  * export default function RootLayout({ children }) {
  *   return (

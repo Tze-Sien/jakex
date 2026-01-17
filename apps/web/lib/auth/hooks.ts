@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getSupabaseClient } from "../client";
+import { getSupabaseClient } from "@repo/auth/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 /**
@@ -16,7 +16,7 @@ import type { User, Session } from "@supabase/supabase-js";
  * Usage:
  * ```tsx
  * 'use client';
- * import { useAuth } from "@repo/auth/hooks";
+ * import { useAuth } from "@/lib/auth/hooks";
  *
  * export function MyComponent() {
  *   const { user, session, loading } = useAuth();
@@ -70,7 +70,7 @@ export function useAuth() {
  * Usage:
  * ```tsx
  * 'use client';
- * import { useRequireAuth } from "@repo/auth/hooks";
+ * import { useRequireAuth } from "@/lib/auth/hooks";
  *
  * export function ProtectedComponent() {
  *   const { user, loading } = useRequireAuth();
@@ -105,7 +105,7 @@ export function useRequireAuth() {
  * Usage:
  * ```tsx
  * 'use client';
- * import { useRedirectIfAuthenticated } from "@repo/auth/hooks";
+ * import { useRedirectIfAuthenticated } from "@/lib/auth/hooks";
  *
  * export function LoginPage() {
  *   const { loading } = useRedirectIfAuthenticated();

@@ -7,7 +7,7 @@ import { LogoutButton } from "@/app/dashboard/components";
 import { AccountSelector } from "./account-selector";
 import { triggerSyncAndAnalysis } from "@/app/actions/sync";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@repo/auth";
+import { useAuth } from "@/lib/auth";
 import type { AdAccount } from "@repo/database/schema";
 
 interface HeaderActionsProps {

@@ -33,19 +33,6 @@ export {
   onAuthStateChange,
 } from "./providers/session";
 
-// Re-export React hooks
-export {
-  useAuth,
-  useRequireAuth,
-  useRedirectIfAuthenticated
-} from "./react/hooks";
-
-// Re-export React Auth Provider
-export {
-  AuthProvider,
-  useAuthContext
-} from "./react/AuthProvider";
-
 // Server utilities are available via @repo/auth/server
 // Do not import from the main package to avoid bundling server-only code in client bundles
 
