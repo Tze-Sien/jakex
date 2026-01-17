@@ -67,60 +67,45 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-foreground">JakeX</h1>
-                <p className="text-xs text-muted-foreground">Ads Manager</p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <HeaderActions
-              accounts={accounts}
-              selectedAccountId={selectedAccountId}
-              lastSyncTime={lastSyncTime}
-            />
-          </div>
+    <>
+      {/* Header Actions */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
+            Welcome back! Here's an overview of your ad performance.
+          </p>
         </div>
-      </header>
+        <HeaderActions
+          accounts={accounts}
+          selectedAccountId={selectedAccountId}
+          lastSyncTime={lastSyncTime}
+        />
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Debug Info - Remove in production */}
-        {analysisError && (
-          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
-              Database Error (Debug Info):
-            </h3>
-            <p className="text-xs text-red-800 dark:text-red-200 font-mono">
-              {analysisError}
-            </p>
-            <p className="text-xs text-red-700 dark:text-red-300 mt-2">
-              Check your DATABASE_URL environment variable in Vercel
-            </p>
-          </div>
-        )}
-
-        {/* AI Analysis Box */}
-        <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
-
-        {/* Placeholder for future content */}
-        <div className="text-center text-muted-foreground py-12">
-          <p>Dashboard content coming soon...</p>
-          <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
+      {/* Debug Info - Remove in production */}
+      {analysisError && (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+            Database Error (Debug Info):
+          </h3>
+          <p className="text-xs text-red-800 dark:text-red-200 font-mono">
+            {analysisError}
+          </p>
+          <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+            Check your DATABASE_URL environment variable in Vercel
+          </p>
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* AI Analysis Box */}
+      <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
+
+      {/* Placeholder for future content */}
+      <div className="text-center text-muted-foreground py-12">
+        <p>Dashboard content coming soon...</p>
+        <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
+      </div>
+    </>
   );
 }

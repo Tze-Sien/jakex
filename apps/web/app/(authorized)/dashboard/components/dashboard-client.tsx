@@ -10,7 +10,7 @@ import { AccountSelector } from "./account-selector";
 import { AccountSelectionDialog } from "./account-selection-dialog";
 import { AIAnalysisBox } from "./ai-analysis-box";
 import type { AdAccount, Campaign, AdSet, Ad, AiAnalysis } from "@repo/database/schema";
-import { LogoutButton } from "@/components/custom/LogoutButton";
+import { LogoutButton } from "@/components/LogoutButton";
 
 interface DashboardClientProps {
   userId: string;
