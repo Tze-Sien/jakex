@@ -38,7 +38,7 @@ export function getMetaOAuthConfig(): MetaOAuthConfig {
   return {
     appId,
     appSecret: appSecret || '',
-    redirectUri: `${baseUrl}/auth/meta-callback`,
+    redirectUri: `${baseUrl}/api/auth/meta-callback`,
     scopes: [
       'ads_read',
       'ads_management',

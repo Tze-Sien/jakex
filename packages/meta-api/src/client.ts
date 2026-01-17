@@ -15,17 +15,22 @@ import {
  */
 export class MetaAdsClient {
   private accessToken: string;
+  private debug: boolean;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, options?: { debug?: boolean }) {
     this.accessToken = accessToken;
+    this.debug = options?.debug ?? false;
     FacebookAdsApi.init(this.accessToken);
-    console.log('[Meta API] Client initialized');
+    if (this.debug) {
+      console.log('[Meta API] Client initialized');
+    }
   }
 
   /**
    * Logs API call details for debugging
    */
   private logApiCall(method: string, params: Record<string, any>) {
+    if (!this.debug) return;
     console.log(`[Meta API] ${method}`, {
       timestamp: new Date().toISOString(),
       params,
@@ -36,6 +41,7 @@ export class MetaAdsClient {
    * Logs API response details
    */
   private logApiResponse(method: string, success: boolean, dataLength?: number, error?: any) {
+    if (!this.debug) return;
     if (success) {
       console.log(`[Meta API] ${method} - SUCCESS`, {
         timestamp: new Date().toISOString(),
@@ -219,7 +225,7 @@ export class MetaAdsClient {
     });
 
     // Additional validation logging
-    if (!date_preset && !time_range) {
+    if (this.debug && !date_preset && !time_range) {
       console.warn('[Meta API] getInsights - WARNING: Neither date_preset nor time_range provided. This may return no data.');
     }
 
@@ -253,27 +259,29 @@ export class MetaAdsClient {
       this.logApiResponse('getInsights', true, result.length);
 
       // Log sample of first insight for debugging
-      if (result.length > 0) {
-        const firstInsight = result[0];
-        console.log('[Meta API] getInsights - Sample data:', {
-          entityId,
-          entityType,
-          sampleInsight: {
-            date_start: firstInsight?.date_start,
-            date_stop: firstInsight?.date_stop,
-            spend: firstInsight?.spend,
-            impressions: firstInsight?.impressions,
-            clicks: firstInsight?.clicks,
-          }
-        });
-      } else {
-        console.warn('[Meta API] getInsights - No insights data returned', {
-          entityId,
-          entityType,
-          level,
-          date_preset,
-          time_range
-        });
+      if (this.debug) {
+        if (result.length > 0) {
+          const firstInsight = result[0];
+          console.log('[Meta API] getInsights - Sample data:', {
+            entityId,
+            entityType,
+            sampleInsight: {
+              date_start: firstInsight?.date_start,
+              date_stop: firstInsight?.date_stop,
+              spend: firstInsight?.spend,
+              impressions: firstInsight?.impressions,
+              clicks: firstInsight?.clicks,
+            }
+          });
+        } else {
+          console.warn('[Meta API] getInsights - No insights data returned', {
+            entityId,
+            entityType,
+            level,
+            date_preset,
+            time_range
+          });
+        }
       }
 
       return result;
