@@ -2,28 +2,45 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AnimatedBackground } from "../login/components/AnimatedBackground";
+import { AnimatedBackground } from "../(auth)/AnimatedBackground";
 import { MetaAuthCard, MetaAuthHero } from "./components";
-import { initiateMetaOAuth } from "@repo/meta-api";
+import { getMetaOAuthUrl } from "@/lib/actions/auth";
+import { EXTERNAL_LINKS } from "@/lib/constants";
+import { useRequireAuth } from "@/lib/auth/hooks";
 
 export default function AuthorizeMetaPage() {
+  const { user, loading: authLoading } = useRequireAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Show loading while checking auth
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   const handleConnect = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Initiate direct Meta OAuth flow
-      // This will redirect to Facebook for authorization
-      initiateMetaOAuth();
+      // Get Meta OAuth URL from server action
+      const { authUrl, state } = await getMetaOAuthUrl();
+
+      // Store state in sessionStorage for verification after redirect
+      sessionStorage.setItem("meta_oauth_state", state);
+
+      // Redirect to Meta OAuth
+      window.location.href = authUrl;
 
       // Browser will automatically redirect to Meta OAuth
       // No need to handle response here - it will come back to /auth/meta-callback
     } catch (error) {
-      console.error('OAuth error:', error);
-      setError('Unexpected error. Please try again.');
+      console.error("OAuth error:", error);
+      setError("Unexpected error. Please try again.");
       setIsLoading(false);
     }
   };
@@ -52,11 +69,11 @@ export default function AuthorizeMetaPage() {
               <div className="mt-6 text-center space-y-3">
                 <p className="text-xs text-muted-foreground">
                   By connecting, you agree to our{" "}
-                  <a href="/terms" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary hover:underline">
                     Terms
                   </a>{" "}
                   and{" "}
-                  <a href="/privacy" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary hover:underline">
                     Privacy Policy
                   </a>
                 </p>
@@ -146,11 +163,11 @@ export default function AuthorizeMetaPage() {
           <div className="px-6 py-4 text-center">
             <p className="text-xs text-muted-foreground leading-relaxed">
               By connecting, you agree to our{" "}
-              <a href="/terms" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary font-medium">
                 Terms
               </a>{" "}
               and{" "}
-              <a href="/privacy" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary font-medium">
                 Privacy Policy
               </a>
             </p>

@@ -5,6 +5,7 @@ import { signInWithEmail, signInWithGoogle } from "@repo/auth";
 import { LoginForm } from "./LoginForm";
 import { AnimatedBackground } from "../AnimatedBackground";
 import { HeroSection } from "../HeroSection";
+import { EXTERNAL_LINKS } from "@/lib/constants";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -134,11 +135,11 @@ export default function LoginPage() {
               <div className="mt-6 text-center space-y-3">
                 <p className="text-xs text-muted-foreground">
                   By continuing, you agree to our{" "}
-                  <a href="/terms" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary hover:underline">
                     Terms
                   </a>{" "}
                   and{" "}
-                  <a href="/privacy" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary hover:underline">
                     Privacy Policy
                   </a>
                 </p>
@@ -225,11 +226,11 @@ export default function LoginPage() {
           <div className="px-6 py-4 text-center">
             <p className="text-xs text-muted-foreground leading-relaxed">
               By continuing, you agree to our{" "}
-              <a href="/terms" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary font-medium">
                 Terms
               </a>{" "}
               and{" "}
-              <a href="/privacy" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary font-medium">
                 Privacy Policy
               </a>
             </p>
