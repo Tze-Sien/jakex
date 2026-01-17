@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { loadUserAdAccounts, saveUserSelectedAdAccounts } from "@/lib/actions/meta";
-import { AnimatedBackground } from "../(auth)/AnimatedBackground";
+import { AnimatedBackground } from "../../(auth)/AnimatedBackground";
 import { SelectAccountHero } from "./SelectAccountHero";
 import { AccountCard } from "./AccountCard";
 import { Button } from "@/components/ui/button";
