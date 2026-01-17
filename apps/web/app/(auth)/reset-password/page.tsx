@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { updatePassword } from "@repo/auth";
-import { AnimatedBackground } from "../login/components";
+import { AnimatedBackground } from "../(auth)/login/components";
 import { useRouter } from "next/navigation";
 
 export default function ResetPasswordPage() {
