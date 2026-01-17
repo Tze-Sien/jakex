@@ -14,6 +14,7 @@ import { HeaderActions } from "./components/header-actions";
 import { AIAnalysisBox } from "./components/ai-analysis-box";
 import { ConnectMetaCard } from "./components/connect-meta-card";
 import { SelectAccountCard } from "./components/select-account-card";
+import { AccountPickerCard } from "./components/account-picker-card";
 
 export default async function DashboardPage() {
   // Get the authenticated user
@@ -32,12 +33,14 @@ export default async function DashboardPage() {
     return null;
   });
 
-  // Get selected ad account from database
+  // Fetch all data from database (or empty arrays if no connection)
+  // Note: getAdAccountsFromDatabase only returns active accounts by default
+  const accounts = connection ? await getAdAccountsFromDatabase(connection.id).catch(() => []) : [];
+  const hasActiveAccounts = accounts.length > 0;
+
+  // Get selected ad account from database (for header display purposes)
   const selectedResult = await getUserSelectedAdAccount().catch(() => ({ success: false, selectedAccountId: null }));
   const selectedAccountId = selectedResult.success ? selectedResult.selectedAccountId : null;
-
-  // Fetch all data from database (or empty arrays if no connection)
-  const accounts = connection ? await getAdAccountsFromDatabase(connection.id).catch(() => []) : [];
   const campaigns = connection ? await getCampaignsFromDatabase(connection.id).catch(() => []) : [];
   const adSets = connection ? await getAdSetsFromDatabase(connection.id).catch(() => []) : [];
   const ads = connection ? await getAdsFromDatabase(connection.id).catch(() => []) : [];
@@ -94,11 +97,13 @@ export default async function DashboardPage() {
       {/* AI Analysis Box */}
       <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
 
-      {/* Show appropriate card based on connection and account selection status */}
+      {/* Show appropriate card based on connection, active accounts, and selection status */}
       {!connection ? (
         <ConnectMetaCard />
-      ) : !selectedAccountId ? (
+      ) : !hasActiveAccounts ? (
         <SelectAccountCard />
+      ) : !selectedAccountId ? (
+        <AccountPickerCard accounts={accounts} />
       ) : (
         /* Placeholder for future content */
         <div className="text-center text-muted-foreground py-12">

@@ -16,9 +16,9 @@ export function SelectAccountCard() {
   return (
     <Card className="text-center">
       <CardHeader>
-        <CardTitle>Select an Ad Account</CardTitle>
+        <CardTitle>Activate an Ad Account</CardTitle>
         <CardDescription>
-          You&apos;re connected to Meta, but you haven&apos;t selected an ad account yet. Please select one to view your dashboard.
+          You&apos;re connected to Meta, but you haven&apos;t activated any ad accounts yet. Please go to Settings to activate at least one account.
         </CardDescription>
       </CardHeader>
       <CardContent>

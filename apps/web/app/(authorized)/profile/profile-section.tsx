@@ -213,12 +213,14 @@ export function ProfileSection({ profile: initialProfile }: ProfileSectionProps)
         </CardHeader>
         <CardContent>
           <AlertDialog>
-            <AlertDialogTrigger>
-              <Button variant="destructive" disabled={isDeleting}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                {isDeleting ? "Deleting..." : "Delete Account"}
-              </Button>
-            </AlertDialogTrigger>
+            <AlertDialogTrigger
+              render={
+                <Button variant="destructive" disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? "Deleting..." : "Delete Account"}
+                </Button>
+              }
+            />
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Account?</AlertDialogTitle>
