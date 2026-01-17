@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import type { AdAccount } from "@repo/database/schema";
 import { ROUTES } from "@/lib/constants";
-import { LogoutButton } from "@/lib/components/LogoutButton";
+import { LogoutButton } from "@/components/custom/LogoutButton";
 
 interface HeaderActionsProps {
   accounts: AdAccount[];

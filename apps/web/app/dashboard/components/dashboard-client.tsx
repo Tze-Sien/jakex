@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LogoutButton } from "@/app/dashboard/components";
 import { triggerSyncAndAnalysis } from "@/lib/actions/sync";
 import { useRouter } from "next/navigation";
 import { DataTable } from "./data-table";
@@ -11,6 +10,7 @@ import { AccountSelector } from "./account-selector";
 import { AccountSelectionDialog } from "./account-selection-dialog";
 import { AIAnalysisBox } from "./ai-analysis-box";
 import type { AdAccount, Campaign, AdSet, Ad, AiAnalysis } from "@repo/database/schema";
+import { LogoutButton } from "@/components/custom/LogoutButton";
 
 interface DashboardClientProps {
   userId: string;

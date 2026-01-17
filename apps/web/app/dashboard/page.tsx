@@ -7,11 +7,11 @@ import {
   getUserSelectedAdAccount,
 } from "@/lib/actions/meta";
 import { getLatestAIAnalysis } from "@/lib/actions/ai-analysis";
-import { HeaderActions } from "@/components/dashboard/header-actions";
-import { AIAnalysisBox } from "@/components/dashboard/ai-analysis-box";
 import { getServerUser } from "@repo/auth/server";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
+import { HeaderActions } from "./components/header-actions";
+import { AIAnalysisBox } from "./components/ai-analysis-box";
 
 export default async function DashboardPage() {
   // Get the authenticated user
