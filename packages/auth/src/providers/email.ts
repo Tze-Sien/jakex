@@ -28,7 +28,7 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      emailRedirectTo: options?.emailRedirectTo ?? `${getBaseUrl('OAuth')}/auth/callback`,
+      emailRedirectTo: options?.emailRedirectTo ?? `${getBaseUrl('OAuth')}/api/auth/callback`,
       data: options?.data,
     },
   });
@@ -77,7 +77,7 @@ export async function resetPasswordForEmail(
   const supabase = getSupabaseClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/auth/callback?type=recovery`,
+    redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/api/auth/callback?type=recovery`,
   });
 
   return { error };

@@ -49,7 +49,7 @@ export default async function proxy(request: NextRequest) {
     "/",
     "/login",
     "/signup",
-    "/auth/callback",
+    "/api/auth/callback",
     "/auth/meta-callback",
     "/auth",
     "/forgot-password",

@@ -13,16 +13,35 @@ import { createRouteHandlerClient } from "@repo/auth/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/dashboard";
-
-  // Security: Validate that next parameter starts with / to prevent open redirects
-  if (!next.startsWith("/")) {
-    next = "/dashboard";
-  }
+  const type = searchParams.get("type");
+  const error = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
+  const errorDescription = searchParams.get("error_description");
 
   console.log("[Auth Callback] Processing OAuth callback...");
   console.log("[Auth Callback] Origin:", origin);
   console.log("[Auth Callback] Code present:", !!code);
+  console.log("[Auth Callback] Type:", type);
+  console.log("[Auth Callback] Error:", error, errorCode, errorDescription);
+
+  // Handle error responses from Supabase (e.g., expired OTP)
+  if (error) {
+    const errorParam = encodeURIComponent(errorDescription || error);
+    if (type === "recovery") {
+      // For password recovery errors, redirect to forgot-password with error message
+      return NextResponse.redirect(`${origin}/forgot-password?error=${errorParam}`);
+    }
+    return NextResponse.redirect(`${origin}/login?error=${errorParam}`);
+  }
+
+  // For password recovery, redirect to reset password page
+  let next = searchParams.get("next") ?? (type === "recovery" ? "/reset-password" : "/dashboard");
+
+  // Security: Validate that next parameter starts with / to prevent open redirects
+  if (!next.startsWith("/")) {
+    next = type === "recovery" ? "/reset-password" : "/dashboard";
+  }
+
   console.log("[Auth Callback] Next redirect:", next);
 
   if (code) {

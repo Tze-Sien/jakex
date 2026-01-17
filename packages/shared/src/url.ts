@@ -36,7 +36,7 @@ function getEnvUrl(): string | null {
  * @example
  * ```ts
  * // In OAuth callback
- * const redirectUrl = `${getBaseUrl('OAuth')}/auth/callback`;
+ * const redirectUrl = `${getBaseUrl('OAuth')}/api/auth/callback`;
  *
  * // In API calls
  * const apiUrl = `${getBaseUrl('API')}/api/webhook`;

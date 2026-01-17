@@ -30,7 +30,7 @@ export async function signInWithGoogle(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/api/auth/callback`,
       scopes: options?.scopes,
       queryParams: {
         access_type: "offline",
@@ -55,7 +55,7 @@ export async function signInWithOAuth(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${getBaseUrl('OAuth')}/api/auth/callback`,
       scopes: options?.scopes,
       queryParams: options?.queryParams,
     },
