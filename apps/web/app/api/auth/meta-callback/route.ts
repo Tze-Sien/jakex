@@ -3,6 +3,11 @@ import { createOrUpdateMetaConnection } from "@/lib/actions/meta";
 import { getServerUser } from "@repo/auth/server";
 import { exchangeCodeForToken, getLongLivedToken, getMetaUserInfo } from "@repo/meta-api";
 
+// Get the base URL for redirects - use env var or fall back to request origin
+function getBaseUrl(requestOrigin: string): string {
+  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin;
+}
+
 /**
  * Meta OAuth Callback Handler
  * This endpoint handles the OAuth callback from Facebook/Meta
@@ -10,8 +15,8 @@ import { exchangeCodeForToken, getLongLivedToken, getMetaUserInfo } from "@repo/
  */
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const baseUrl = getBaseUrl(requestUrl.origin);
   const code = requestUrl.searchParams.get("code");
-  const state = requestUrl.searchParams.get("state");
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
 
@@ -21,7 +26,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(
       new URL(
         `/authorize-meta?error=${encodeURIComponent(errorDescription || error)}`,
-        requestUrl.origin
+        baseUrl
       )
     );
   }
@@ -30,7 +35,7 @@ export async function GET(request: Request) {
   if (!code) {
     console.error("No authorization code received from Meta");
     return NextResponse.redirect(
-      new URL("/authorize-meta?error=no_code", requestUrl.origin)
+      new URL("/authorize-meta?error=no_code", baseUrl)
     );
   }
 
@@ -41,7 +46,7 @@ export async function GET(request: Request) {
     if (!user) {
       console.error("User not authenticated");
       return NextResponse.redirect(
-        new URL("/login?error=not_authenticated&next=/authorize-meta", requestUrl.origin)
+        new URL("/login?error=not_authenticated&next=/authorize-meta", baseUrl)
       );
     }
 
@@ -77,7 +82,7 @@ export async function GET(request: Request) {
     });
 
     // Redirect to account selection page
-    return NextResponse.redirect(new URL("/select-account", requestUrl.origin));
+    return NextResponse.redirect(new URL("/select-account", baseUrl));
   } catch (error) {
     console.error("Error processing Meta OAuth callback:", error);
     return NextResponse.redirect(
@@ -85,7 +90,7 @@ export async function GET(request: Request) {
         `/authorize-meta?error=${encodeURIComponent(
           error instanceof Error ? error.message : "Unknown error"
         )}`,
-        requestUrl.origin
+        baseUrl
       )
     );
   }

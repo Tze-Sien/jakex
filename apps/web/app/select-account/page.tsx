@@ -32,13 +32,14 @@ export default function SelectAccountPage() {
         }
 
         // Transform Meta API response to UI format
+        // Note: Meta API returns amount_spent in smallest currency unit (e.g., cents for USD)
         const transformed = result.accounts.map(acc => ({
           id: acc.id,
           name: acc.name,
           accountId: acc.account_id,
           currency: acc.currency,
           status: acc.account_status === 1 ? 'active' : 'inactive',
-          spend: parseFloat(acc.amount_spent || '0'),
+          spend: parseFloat(acc.amount_spent || '0') / 100,
           campaigns: 0 // Will be populated after sync
         }));
 

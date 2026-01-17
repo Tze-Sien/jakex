@@ -51,7 +51,7 @@ export async function performAIAnalysis(reportId: string, userId: string) {
 
     // Group insights by time range and aggregate
     const timeRanges = ["today", "last_3d", "last_7d"];
-    const analysisData: any = {};
+    const analysisData: Record<string, any> = {};
 
     for (const timeRange of timeRanges) {
       const timeRangeInsights = allInsights.filter(
@@ -91,60 +91,6 @@ export async function performAIAnalysis(reportId: string, userId: string) {
         roas: null, // Would need revenue data
       };
     }
-
-    // Get campaign, ad set, and ad details
-    const campaignInsights = allInsights.filter((i) => i.campaignId !== null);
-    const adSetInsights = allInsights.filter((i) => i.adSetId !== null);
-    const adInsights = allInsights.filter((i) => i.adId !== null);
-
-    // Prepare comprehensive analysis input
-    const analysisInput = {
-      reportId,
-      timeRanges: analysisData,
-      campaigns: campaignInsights.map((i) => ({
-        entityName: i.entityName,
-        entityStatus: i.entityStatus,
-        objective: i.campaignObjective,
-        dailyBudget: i.campaignDailyBudget,
-        lifetimeBudget: i.campaignLifetimeBudget,
-        spend: Number(i.spend),
-        impressions: Number(i.impressions),
-        clicks: Number(i.clicks),
-        conversions: Number(i.conversions),
-        ctr: i.ctr ? parseFloat(i.ctr) : 0,
-        cpc: Number(i.cpc) || 0,
-        cpm: Number(i.cpm) || 0,
-      })),
-      adSets: adSetInsights.map((i) => ({
-        entityName: i.entityName,
-        entityStatus: i.entityStatus,
-        optimizationGoal: i.adSetOptimizationGoal,
-        bidStrategy: i.adSetBidStrategy,
-        targeting: i.adSetTargeting,
-        spend: Number(i.spend),
-        impressions: Number(i.impressions),
-        clicks: Number(i.clicks),
-        conversions: Number(i.conversions),
-        ctr: i.ctr ? parseFloat(i.ctr) : 0,
-        cpc: Number(i.cpc) || 0,
-        cpm: Number(i.cpm) || 0,
-      })),
-      ads: adInsights.map((i) => ({
-        entityName: i.entityName,
-        entityStatus: i.entityStatus,
-        creativeType: i.adCreativeType,
-        headline: i.adHeadline,
-        bodyText: i.adBodyText,
-        callToAction: i.adCallToAction,
-        spend: Number(i.spend),
-        impressions: Number(i.impressions),
-        clicks: Number(i.clicks),
-        conversions: Number(i.conversions),
-        ctr: i.ctr ? parseFloat(i.ctr) : 0,
-        cpc: Number(i.cpc) || 0,
-        cpm: Number(i.cpm) || 0,
-      })),
-    };
 
     // Initialize generic LLM Client
     const llmClient = new LLMClient({
