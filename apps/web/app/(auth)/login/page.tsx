@@ -5,7 +5,7 @@ import { signInWithEmail, signInWithGoogle } from "@repo/auth";
 import { LoginForm } from "./LoginForm";
 import { AnimatedBackground } from "../AnimatedBackground";
 import { HeroSection } from "../HeroSection";
-import { EXTERNAL_LINKS } from "@/lib/constants";
+import { ROUTES, EXTERNAL_LINKS } from "@/lib/constants";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +63,7 @@ export default function LoginPage() {
       }
 
       // Successfully signed in - force a full page reload to ensure cookies are set
-      window.location.href = "/dashboard";
+      window.location.href = ROUTES.DASHBOARD;
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);
@@ -120,7 +120,7 @@ export default function LoginPage() {
                       <p className="text-sm text-muted-foreground">
                         Don&apos;t have an account?{" "}
                         <a
-                          href="/signup"
+                          href={ROUTES.SIGNUP}
                           className="text-primary hover:underline font-medium"
                         >
                           Sign up
@@ -209,7 +209,7 @@ export default function LoginPage() {
                   <p className="text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
                     <a
-                      href="/signup"
+                      href={ROUTES.SIGNUP}
                       className="text-primary font-semibold active:opacity-70 transition-opacity"
                     >
                       Sign up

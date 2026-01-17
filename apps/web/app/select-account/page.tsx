@@ -6,13 +6,14 @@ import { AccountCard } from "./AccountCard";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CustomScrollbarStyles } from "./CustomScrollbarStyles";
+import { ROUTES } from "@/lib/constants";
 
 export default async function SelectAccountPage() {
   const result = await loadUserAdAccounts();
 
   // Handle auth redirect on server side
   if (!result.success && result.needsAuth) {
-    redirect('/authorize-meta');
+    redirect(ROUTES.AUTHORIZE_META);
   }
 
   const accounts = result.success
@@ -43,7 +44,7 @@ export default async function SelectAccountPage() {
     });
 
     if (result.success) {
-      redirect('/collect-data');
+      redirect(ROUTES.DASHBOARD);
     }
   }
 

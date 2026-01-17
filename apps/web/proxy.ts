@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ROUTES } from "@/lib/constants";
 
 /**
  * Proxy for Next.js 16+ App Router with Supabase authentication.
@@ -46,32 +47,32 @@ export default async function proxy(request: NextRequest) {
 
   // Public routes that don't require authentication
   const publicRoutes = [
-    "/",
-    "/login",
-    "/signup",
-    "/api/auth/callback",
-    "/api/auth/meta-callback",
+    ROUTES.HOME,
+    ROUTES.LOGIN,
+    ROUTES.SIGNUP,
+    ROUTES.API.AUTH_CALLBACK,
+    ROUTES.API.META_CALLBACK,
     "/auth",
-    "/forgot-password",
-    "/reset-password",
+    ROUTES.FORGOT_PASSWORD,
+    ROUTES.RESET_PASSWORD,
   ];
   const isPublicRoute = publicRoutes.some((route) => {
-    if (route === "/") return pathname === "/";
+    if (route === ROUTES.HOME) return pathname === ROUTES.HOME;
     return pathname.startsWith(route);
   });
 
   // Auth routes that authenticated users shouldn't access
-  const authRoutes = ["/login", "/signup"];
+  const authRoutes = [ROUTES.LOGIN, ROUTES.SIGNUP];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(ROUTES.DASHBOARD, request.url));
   }
 
   // If user is not authenticated and trying to access protected routes, redirect to login
   if (!user && !isPublicRoute) {
-    const redirectUrl = new URL("/login", request.url);
+    const redirectUrl = new URL(ROUTES.LOGIN, request.url);
     // Preserve the original URL to redirect back after login
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);

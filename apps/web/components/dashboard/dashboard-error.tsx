@@ -2,6 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants";
 
 interface DashboardErrorProps {
   error: Error;
@@ -39,7 +40,7 @@ export function DashboardError({ error, reset }: DashboardErrorProps) {
             variant="outline"
             size="lg"
             className="w-full"
-            onClick={() => window.location.href = '/authorize-meta'}
+            onClick={() => window.location.href = ROUTES.AUTHORIZE_META}
           >
             Check Connection
           </Button>

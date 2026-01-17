@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getSupabaseClient } from "@repo/auth/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { ROUTES } from "../constants";
 
 /**
  * Hook to get the current authenticated user in Client Components.
@@ -90,7 +91,7 @@ export function useRequireAuth() {
   useEffect(() => {
     if (!loading && !user) {
       // Redirect to login with return URL
-      const redirectUrl = `/login?redirect=${encodeURIComponent(pathname || "/")}`;
+      const redirectUrl = `${ROUTES.LOGIN}?redirect=${encodeURIComponent(pathname || ROUTES.HOME)}`;
       router.push(redirectUrl);
     }
   }, [user, loading, router, pathname]);
@@ -116,7 +117,7 @@ export function useRequireAuth() {
  * }
  * ```
  */
-export function useRedirectIfAuthenticated(redirectTo: string = "/dashboard") {
+export function useRedirectIfAuthenticated(redirectTo: string = ROUTES.DASHBOARD) {
   const { user, loading } = useAuth();
   const router = useRouter();
 

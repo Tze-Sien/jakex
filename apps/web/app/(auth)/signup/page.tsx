@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { UnifiedSignUpForm } from "./SignUpForm";
 import { AnimatedBackground } from "../AnimatedBackground";
 import { HeroSection } from "../HeroSection";
+import { ROUTES, EXTERNAL_LINKS } from "@/lib/constants";
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +71,7 @@ export default function SignUpPage() {
         setLoadingProvider(null);
       } else {
         // User is automatically signed in
-        router.push("/authorize-meta");
+        router.push(ROUTES.AUTHORIZE_META);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -106,7 +107,7 @@ export default function SignUpPage() {
             </p>
           </div>
           <Button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push(ROUTES.LOGIN)}
             variant="outline"
             className="w-full"
           >
@@ -166,7 +167,7 @@ export default function SignUpPage() {
                       <p className="text-sm text-muted-foreground">
                         Already have an account?{" "}
                         <a
-                          href="/login"
+                          href={ROUTES.LOGIN}
                           className="text-primary hover:underline font-medium"
                         >
                           Sign in
@@ -181,11 +182,11 @@ export default function SignUpPage() {
               <div className="mt-6 text-center space-y-3">
                 <p className="text-xs text-muted-foreground">
                   By continuing, you agree to our{" "}
-                  <a href="/terms" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary hover:underline">
                     Terms
                   </a>{" "}
                   and{" "}
-                  <a href="/privacy" className="text-primary hover:underline">
+                  <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary hover:underline">
                     Privacy Policy
                   </a>
                 </p>
@@ -252,7 +253,7 @@ export default function SignUpPage() {
                   <p className="text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <a
-                      href="/login"
+                      href={ROUTES.LOGIN}
                       className="text-primary font-semibold active:opacity-70 transition-opacity"
                     >
                       Sign in
@@ -268,11 +269,11 @@ export default function SignUpPage() {
           <div className="px-6 py-4 text-center">
             <p className="text-xs text-muted-foreground leading-relaxed">
               By continuing, you agree to our{" "}
-              <a href="/terms" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.terms} target="_blank" className="text-primary font-medium">
                 Terms
               </a>{" "}
               and{" "}
-              <a href="/privacy" className="text-primary font-medium">
+              <a href={EXTERNAL_LINKS.privacyPolicy} target="_blank" className="text-primary font-medium">
                 Privacy Policy
               </a>
             </p>

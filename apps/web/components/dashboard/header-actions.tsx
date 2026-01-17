@@ -8,6 +8,7 @@ import { triggerSyncAndAnalysis } from "@/lib/actions/sync";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import type { AdAccount } from "@repo/database/schema";
+import { ROUTES } from "@/lib/constants";
 import { LogoutButton } from "@/lib/components/LogoutButton";
 
 interface HeaderActionsProps {
@@ -45,15 +46,12 @@ export function HeaderActions({
         // Check if token expired and needs re-authentication
         if (result.needsAuth) {
           setSyncMessage(`✗ Session expired. Redirecting to re-authenticate...`);
-          setTimeout(() => {
-            router.push('/authorize-meta');
-          }, 2000);
+          router.push(ROUTES.AUTHORIZE_META);
         } else if (result.step === 'connection_check') {
           // User doesn't have a Meta connection - redirect to authorize page
           setSyncMessage(`✗ ${result.error}`);
-          setTimeout(() => {
-            router.push('/authorize-meta');
-          }, 2000);
+          router.push(ROUTES.AUTHORIZE_META);
+
         } else if (result.step === 'analysis') {
           // Show the actual error message from analysis
           setSyncMessage(`✓ Sync completed. ✗ AI analysis failed: ${result.error || 'Unknown error'}`);

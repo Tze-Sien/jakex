@@ -11,13 +11,14 @@ import { HeaderActions } from "@/components/dashboard/header-actions";
 import { AIAnalysisBox } from "@/components/dashboard/ai-analysis-box";
 import { getServerUser } from "@repo/auth/server";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/constants";
 
 export default async function DashboardPage() {
   // Get the authenticated user
   const user = await getServerUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(ROUTES.LOGIN);
   }
 
   const userId = user.id;
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
 
   // Redirect to authorize-meta page if no connection exists
   if (!connection) {
-    redirect("/authorize-meta");
+    redirect(ROUTES.AUTHORIZE_META);
   }
 
   // Get selected ad account from database
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
 
   // Redirect to select-account page if no account is selected
   if (!selectedAccountId) {
-    redirect("/select-account");
+    redirect(ROUTES.SELECT_ACCOUNT);
   }
 
   // Fetch all data from database (or empty arrays if no connection)

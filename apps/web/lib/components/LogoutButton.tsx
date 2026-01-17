@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { signOut } from "@repo/auth";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants";
 
 export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +21,7 @@ export function LogoutButton() {
       }
 
       // Redirect to login page after successful logout
-      window.location.href = "/login";
+      window.location.href = ROUTES.LOGIN;
     } catch (err) {
       console.error("Unexpected logout error:", err);
       setIsLoading(false);

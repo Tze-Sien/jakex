@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createOrUpdateMetaConnection, getUserSelectedAdAccount } from "@/lib/actions/meta";
 import { getServerUser } from "@repo/auth/server";
 import { exchangeCodeForToken, getLongLivedToken, getMetaUserInfo } from "@repo/meta-api";
+import { ROUTES } from "@/lib/constants";
 
 // Get the base URL for redirects - use env var or fall back to request origin
 function getBaseUrl(requestOrigin: string): string {
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     console.error("Meta OAuth error:", error, errorDescription);
     return NextResponse.redirect(
       new URL(
-        `/authorize-meta?error=${encodeURIComponent(errorDescription || error)}`,
+        `${ROUTES.AUTHORIZE_META}?error=${encodeURIComponent(errorDescription || error)}`,
         baseUrl
       )
     );
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
   if (!code) {
     console.error("No authorization code received from Meta");
     return NextResponse.redirect(
-      new URL("/authorize-meta?error=no_code", baseUrl)
+      new URL(`${ROUTES.AUTHORIZE_META}?error=no_code`, baseUrl)
     );
   }
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     if (!user) {
       console.error("User not authenticated");
       return NextResponse.redirect(
-        new URL("/login?error=not_authenticated&next=/authorize-meta", baseUrl)
+        new URL(`${ROUTES.LOGIN}?error=not_authenticated&next=${ROUTES.AUTHORIZE_META}`, baseUrl)
       );
     }
 
@@ -87,15 +88,15 @@ export async function GET(request: Request) {
     // If user already has selected accounts, redirect to dashboard
     // Otherwise, redirect to account selection page
     const redirectPath = selectedAccountResult.success && selectedAccountResult.selectedAccountId
-      ? "/dashboard"
-      : "/select-account";
+      ? ROUTES.DASHBOARD
+      : ROUTES.SELECT_ACCOUNT;
 
     return NextResponse.redirect(new URL(redirectPath, baseUrl));
   } catch (error) {
     console.error("Error processing Meta OAuth callback:", error);
     return NextResponse.redirect(
       new URL(
-        `/authorize-meta?error=${encodeURIComponent(
+        `${ROUTES.AUTHORIZE_META}?error=${encodeURIComponent(
           error instanceof Error ? error.message : "Unknown error"
         )}`,
         baseUrl

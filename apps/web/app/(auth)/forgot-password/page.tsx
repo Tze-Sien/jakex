@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { resetPasswordForEmail } from "@repo/auth";
 import { AnimatedBackground } from "../AnimatedBackground";
+import { ROUTES } from "@/lib/constants";
 
 export default function ForgotPasswordPage() {
   const searchParams = useSearchParams();
@@ -71,7 +72,7 @@ export default function ForgotPasswordPage() {
                         </p>
                       </div>
                       <a
-                        href="/login"
+                        href={ROUTES.LOGIN}
                         className="block text-center text-sm text-primary hover:underline"
                       >
                         Back to login
@@ -122,7 +123,7 @@ export default function ForgotPasswordPage() {
                         <p className="text-sm text-muted-foreground">
                           Remember your password?{" "}
                           <a
-                            href="/login"
+                            href={ROUTES.LOGIN}
                             className="text-primary hover:underline font-medium"
                           >
                             Sign in
@@ -144,7 +145,7 @@ export default function ForgotPasswordPage() {
         <div className="safe-area-top bg-background/95 backdrop-blur-md border-b border-border/50">
           <div className="px-6 py-4 flex items-center">
             <a
-              href="/login"
+              href={ROUTES.LOGIN}
               className="inline-flex items-center justify-center w-10 h-10 rounded-xl hover:bg-muted transition-colors"
             >
               <svg
@@ -189,7 +190,7 @@ export default function ForgotPasswordPage() {
                       </p>
                     </div>
                     <a
-                      href="/login"
+                      href={ROUTES.LOGIN}
                       className="block text-center text-sm text-primary font-semibold active:opacity-70 transition-opacity"
                     >
                       Back to login
@@ -239,7 +240,7 @@ export default function ForgotPasswordPage() {
                       <p className="text-sm text-muted-foreground">
                         Remember your password?{" "}
                         <a
-                          href="/login"
+                          href={ROUTES.LOGIN}
                           className="text-primary font-semibold active:opacity-70 transition-opacity"
                         >
                           Sign in

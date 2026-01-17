@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { updatePassword } from "@repo/auth";
-
 import { useRouter } from "next/navigation";
 import { AnimatedBackground } from "../AnimatedBackground";
+import { ROUTES } from "@/lib/constants";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -63,10 +63,7 @@ export default function ResetPasswordPage() {
       setSuccess(true);
       setIsLoading(false);
 
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+      router.push(ROUTES.LOGIN);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);

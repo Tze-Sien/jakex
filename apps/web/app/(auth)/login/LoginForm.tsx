@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ROUTES } from "@/lib/constants";
 import { Spinner } from "@/components/ui/spinner";
 
 interface LoginFormProps {
@@ -58,7 +59,7 @@ export function LoginForm({
               Password
             </Label>
             <a
-              href="/forgot-password"
+              href={ROUTES.FORGOT_PASSWORD}
               className="text-xs text-primary hover:underline active:opacity-70 font-medium"
             >
               Forgot password?
