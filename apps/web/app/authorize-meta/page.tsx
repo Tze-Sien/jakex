@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatedBackground } from "../(auth)/AnimatedBackground";
-import { MetaAuthCard, MetaAuthHero } from "./components";
 import { getMetaOAuthUrl } from "@/lib/actions/auth";
 import { EXTERNAL_LINKS } from "@/lib/constants";
 import { useRequireAuth } from "@/lib/auth/hooks";
+import { MetaAuthHero } from "./MetaAuthHero";
+import { MetaAuthCard } from "./MetaAuthCard";
 
 export default function AuthorizeMetaPage() {
   const { user, loading: authLoading } = useRequireAuth();
