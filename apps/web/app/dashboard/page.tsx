@@ -59,7 +59,7 @@ export default async function DashboardPage() {
   let latestAnalysis = null;
   let analysisError = null;
   try {
-    latestAnalysis = await getLatestAIAnalysis(userId);
+    latestAnalysis = await getLatestAIAnalysis();
   } catch (error) {
     analysisError = error instanceof Error ? error.message : String(error);
     console.error("Failed to fetch AI analysis:", error);

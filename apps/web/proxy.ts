@@ -50,12 +50,10 @@ export default async function proxy(request: NextRequest) {
     "/login",
     "/signup",
     "/api/auth/callback",
-    "/auth/meta-callback",
+    "/api/auth/meta-callback",
     "/auth",
     "/forgot-password",
     "/reset-password",
-    "/authorize-meta",
-    "/select-account"
   ];
   const isPublicRoute = publicRoutes.some((route) => {
     if (route === "/") return pathname === "/";

@@ -5,13 +5,11 @@ import {
   aiAnalyses,
   reports,
   insights,
-  campaigns,
-  adSets,
-  ads,
 } from "@repo/database/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { LLMClient } from "@repo/llm-service";
 import { MetaAdsAnalysisClient } from "@/lib/llm/meta-ads/client";
+import { withAuth } from "@repo/auth/server";
 
 /**
  * Performs AI analysis on synced ad data
@@ -263,6 +261,23 @@ export async function performAIAnalysis(reportId: string, userId: string) {
  * Get AI analysis for a specific report
  */
 export async function getAIAnalysis(reportId: string) {
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return null;
+  }
+
+  // Verify report belongs to user
+  const [report] = await db
+    .select()
+    .from(reports)
+    .where(and(eq(reports.id, reportId), eq(reports.userId, auth.user.id)))
+    .limit(1);
+
+  if (!report) {
+    return null;
+  }
+
   const [analysis] = await db
     .select()
     .from(aiAnalyses)
@@ -274,84 +289,21 @@ export async function getAIAnalysis(reportId: string) {
 }
 
 /**
- * Get latest AI analysis for a user
+ * Get latest AI analysis for the current user
  */
-export async function getLatestAIAnalysis(userId: string) {
+export async function getLatestAIAnalysis() {
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return null;
+  }
+
   const [analysis] = await db
     .select()
     .from(aiAnalyses)
-    .where(eq(aiAnalyses.userId, userId))
+    .where(eq(aiAnalyses.userId, auth.user.id))
     .orderBy(desc(aiAnalyses.createdAt))
     .limit(1);
 
   return analysis;
-}
-
-/**
- * Build comprehensive account-level analysis prompt
- */
-function buildAccountAnalysisPrompt(data: any): string {
-  return `
-You are an expert Meta Ads analyst. Analyze this advertising account's performance and provide actionable insights.
-
-## Account Performance Overview
-
-### Time Range Data:
-- Today: ${JSON.stringify(data.timeRanges.today, null, 2)}
-- Last 3 Days: ${JSON.stringify(data.timeRanges.last_3d, null, 2)}
-- Last 7 Days: ${JSON.stringify(data.timeRanges.last_7d, null, 2)}
-
-### Campaigns (${data.campaigns.length} total):
-${data.campaigns
-  .map(
-    (c: any, i: number) => `
-${i + 1}. ${c.entityName} (${c.entityStatus})
-   - Objective: ${c.objective}
-   - Budget: ${c.dailyBudget ? `$${c.dailyBudget}/day` : `$${c.lifetimeBudget} lifetime`}
-   - Spend: $${c.spend} | Impressions: ${c.impressions} | Clicks: ${c.clicks}
-   - CTR: ${c.ctr.toFixed(2)}% | CPC: $${c.cpc.toFixed(2)} | CPM: $${c.cpm.toFixed(2)}
-`
-  )
-  .join("\n")}
-
-### Ad Sets (${data.adSets.length} total):
-${data.adSets
-  .slice(0, 5)
-  .map(
-    (as: any, i: number) => `
-${i + 1}. ${as.entityName} (${as.entityStatus})
-   - Optimization: ${as.optimizationGoal}
-   - Spend: $${as.spend} | CTR: ${as.ctr.toFixed(2)}% | CPC: $${as.cpc.toFixed(2)}
-`
-  )
-  .join("\n")}
-
-### Ads (${data.ads.length} total):
-${data.ads
-  .slice(0, 5)
-  .map(
-    (ad: any, i: number) => `
-${i + 1}. ${ad.entityName} (${ad.entityStatus})
-   - Creative: ${ad.creativeType} | CTA: ${ad.callToAction}
-   - Headline: ${ad.headline}
-   - Spend: $${ad.spend} | CTR: ${ad.ctr.toFixed(2)}% | CPC: $${ad.cpc.toFixed(2)}
-`
-  )
-  .join("\n")}
-
-Please provide:
-1. Overall assessment of account health (2-4 sentences)
-2. 3-7 key findings from the data
-3. Detailed performance analysis (300-600 words)
-4. Creative analysis if applicable (200-400 words)
-5. Targeting analysis if applicable (200-400 words)
-6. 3-5 actionable recommendations with priority levels
-
-Focus on:
-- ROI and efficiency metrics
-- Budget allocation opportunities
-- Creative performance patterns
-- Targeting optimization potential
-- Quick wins vs long-term strategies
-`;
 }

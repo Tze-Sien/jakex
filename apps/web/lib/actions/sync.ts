@@ -13,6 +13,7 @@ import {
 } from "@repo/database/schema";
 import { eq, and } from "drizzle-orm";
 import { MetaAdsClient, InsightsDatePreset, InsightsLevel } from "@repo/meta-api";
+import { withAuth } from "@repo/auth/server";
 
 // Define custom error type for auth-related errors
 interface AuthError extends Error {
@@ -601,10 +602,16 @@ async function getOrCreateAdAccount(connectionId: string, accessToken: string) {
  * Triggers a manual sync for the current user
  * Automatically gets the user's connection and ad account
  * Then triggers AI analysis on the synced data
- * @param userId - The user's ID
  * @returns Success status and message
  */
-export async function triggerSync(userId: string) {
+export async function triggerSync() {
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return { success: false, error: auth.error };
+  }
+  const userId = auth.user.id;
+
   try {
     // Get the user's META connection
     const connections = await db
@@ -680,10 +687,16 @@ export async function triggerSync(userId: string) {
 /**
  * Triggers sync and then AI analysis
  * This is the main entry point for the sync + analyze workflow
- * @param userId - The user's ID
  * @returns Combined result of sync and analysis
  */
-export async function triggerSyncAndAnalysis(userId: string) {
+export async function triggerSyncAndAnalysis() {
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return { success: false, error: auth.error, step: "auth" };
+  }
+  const userId = auth.user.id;
+
   try {
     // Check if user has an active Meta connection first
     const connections = await db
@@ -706,7 +719,7 @@ export async function triggerSyncAndAnalysis(userId: string) {
     }
 
     // Step 1: Sync data
-    const syncResult = await triggerSync(userId);
+    const syncResult = await triggerSync();
 
     if (!syncResult.success) {
       return {

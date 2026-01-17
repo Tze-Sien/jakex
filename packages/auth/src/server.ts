@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 /**
  * Creates a Supabase client for Server Components (App Router).
@@ -130,6 +130,36 @@ export async function requireAuth() {
     throw new Error("Unauthorized - Authentication required");
   }
   return user;
+}
+
+/**
+ * Authentication guard for server actions (Data Access Layer).
+ * Returns user or error object instead of throwing - suitable for server actions.
+ *
+ * Usage:
+ * ```tsx
+ * "use server";
+ * import { withAuth } from "@repo/auth/server";
+ *
+ * export async function myServerAction() {
+ *   const auth = await withAuth();
+ *   if (!auth.success) {
+ *     return { success: false, error: auth.error };
+ *   }
+ *   const { user } = auth;
+ *   // user is guaranteed to be non-null here
+ * }
+ * ```
+ */
+export async function withAuth(): Promise<
+  | { success: true; user: User }
+  | { success: false; error: string }
+> {
+  const user = await getServerUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized - Authentication required" };
+  }
+  return { success: true, user };
 }
 
 // Re-export types

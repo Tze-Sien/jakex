@@ -56,7 +56,7 @@ export function DashboardClient({
     setSyncMessage('✓ Syncing data to database...');
 
     try {
-      const result = await triggerSyncAndAnalysis(userId);
+      const result = await triggerSyncAndAnalysis();
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);

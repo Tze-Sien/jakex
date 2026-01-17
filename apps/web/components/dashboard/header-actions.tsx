@@ -34,7 +34,7 @@ export function HeaderActions({
     setSyncMessage('✓ Syncing data and running AI analysis...');
 
     try {
-      const result = await triggerSyncAndAnalysis(user.id);
+      const result = await triggerSyncAndAnalysis();
 
       if (result.success) {
         setSyncMessage(`✓ ${result.message}`);

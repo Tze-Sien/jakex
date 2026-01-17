@@ -3,7 +3,7 @@
 import { db } from "@repo/database";
 import { metaConnections, adAccounts, ads, campaigns, adSets, userSelectedAdAccount } from "@repo/database/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { getServerUser } from "@repo/auth/server";
+import { withAuth } from "@repo/auth/server";
 import { MetaAdsClient } from "@repo/meta-api";
 
 
@@ -45,17 +45,19 @@ export async function getFirstAdAccount(connectionId: string) {
 /**
  * Sets the user's selected ad account and persists it to the database
  * @param adAccountId - The ad account ID to select
- * @param userId - The user's ID (optional, uses current authenticated user)
+ * @param userId - The user's ID (optional, for internal use only)
  * @returns Success/error result
  */
 export async function setUserSelectedAdAccount(adAccountId: string, userId?: string) {
   try {
     // Get the current user if userId not provided
-    const user = userId ? null : await getServerUser();
-    const currentUserId = userId || user?.id;
-
+    let currentUserId = userId;
     if (!currentUserId) {
-      return { success: false, error: "User not authenticated" };
+      const auth = await withAuth();
+      if (!auth.success) {
+        return { success: false, error: auth.error };
+      }
+      currentUserId = auth.user.id;
     }
 
     // Verify the ad account exists in the database
@@ -91,17 +93,19 @@ export async function setUserSelectedAdAccount(adAccountId: string, userId?: str
 
 /**
  * Gets the user's selected ad account from the database
- * @param userId - The user's ID (optional, uses current authenticated user)
+ * @param userId - The user's ID (optional, for internal use only)
  * @returns The selected ad account ID or null
  */
 export async function getUserSelectedAdAccount(userId?: string) {
   try {
     // Get the current user if userId not provided
-    const user = userId ? null : await getServerUser();
-    const currentUserId = userId || user?.id;
-
+    let currentUserId = userId;
     if (!currentUserId) {
-      return { success: false, error: "User not authenticated", selectedAccountId: null };
+      const auth = await withAuth();
+      if (!auth.success) {
+        return { success: false, error: auth.error, selectedAccountId: null };
+      }
+      currentUserId = auth.user.id;
     }
 
     const selected = await db.query.userSelectedAdAccount.findFirst({
@@ -404,13 +408,14 @@ export async function fetchMetaAdAccounts(connectionId: string, accessToken: str
  * @returns Array of ad accounts or error
  */
 export async function loadUserAdAccounts() {
-  try {
-    const user = await getServerUser();
-    if (!user) {
-      return { success: false, error: 'Not authenticated', accounts: [] };
-    }
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return { success: false, error: auth.error, accounts: [] };
+  }
 
-    const connection = await getMetaConnection(user.id);
+  try {
+    const connection = await getMetaConnection(auth.user.id);
     if (!connection) {
       return { success: false, error: 'No Meta connection found', accounts: [], needsAuth: true };
     }
@@ -521,13 +526,14 @@ export async function saveUserSelectedAdAccounts(params: {
     accountId: string;
   }>;
 }) {
-  try {
-    const user = await getServerUser();
-    if (!user) {
-      return { success: false, error: 'Not authenticated' };
-    }
+  // Data Access Layer auth guard
+  const auth = await withAuth();
+  if (!auth.success) {
+    return { success: false, error: auth.error };
+  }
 
-    const connection = await getMetaConnection(user.id);
+  try {
+    const connection = await getMetaConnection(auth.user.id);
     if (!connection) {
       return { success: false, error: 'No Meta connection found' };
     }
