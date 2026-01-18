@@ -12,6 +12,11 @@ export * from './types';
 // Export Meta API client
 export { MetaAdsClient } from './client';
 
+
+// Export rate limiter and retry utilities
+export { MetaApiRateLimiter, getRateLimiter, clearRateLimiter, clearAllRateLimiters } from './rate-limiter';
+export { withRetry, Retry, RetryError, type RetryConfig } from './retry';
+
 // Export OAuth authentication
 export {
   // Config

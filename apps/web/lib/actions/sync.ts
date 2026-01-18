@@ -6,13 +6,12 @@ import {
   campaigns,
   adSets,
   ads,
-  insights,
-  reports,
   syncJobs,
   metaConnections,
 } from "@repo/database/schema";
 import { eq, and } from "drizzle-orm";
-import { MetaAdsClient, InsightsDatePreset, InsightsLevel } from "@repo/meta-api";
+import { MetaAdsClient } from "@repo/meta-api";
+import { syncAdAccountInsights } from "@/lib/services/meta/insights-sync-service";
 import { withAuth } from "@repo/auth/server";
 
 // Define custom error type for auth-related errors
@@ -24,14 +23,12 @@ interface AuthError extends Error {
  * Syncs all data for a specific ad account from Meta API to the database
  * This includes campaigns, ad sets, ads, and insights
  *
- * @param profileId - The user's profile ID (internal DB ID, not Supabase user ID)
  * @param connectionId - The META connection ID
  * @param adAccountId - The META ad account ID (e.g., "act_123456")
  * @param accessToken - The META access token
  * @returns Object containing sync results and any errors
  */
 export async function syncAdAccountData(
-  profileId: string,
   connectionId: string,
   adAccountId: string,
   accessToken: string
@@ -259,241 +256,33 @@ export async function syncAdAccountData(
       errors.push(errorMsg);
     }
 
-    // Step 4: Sync Insights
-    // Create a report record for this sync
-    const [report] = await db
-      .insert(reports)
-      .values({
-        userId: profileId,
-        adAccountId: adAccount.id,
-        status: "active",
-      })
-      .returning();
-
-    // Define time ranges to sync
-    const timeRanges = [
-      { preset: InsightsDatePreset.TODAY, name: "today" },
-      { preset: InsightsDatePreset.LAST_3D, name: "last_3d" },
-      { preset: InsightsDatePreset.LAST_7D, name: "last_7d" },
-    ];
-
-    // Step 4.1: Sync Campaign Insights
+    // Step 4: Sync Insights (using new efficient sync service)
+    // This now syncs atomic daily data instead of redundant aggregated ranges
+    // Uses time_increment=1 to minimize API calls (4 calls vs 1,350+)
     try {
-      const dbCampaigns = await db
-        .select()
-        .from(campaigns)
-        .where(eq(campaigns.adAccountId, adAccount.id));
+      console.log(`Starting insights sync for ad account ${adAccount.id}...`);
+      const syncResults = await syncAdAccountInsights(accessToken, adAccount.id);
 
-      for (const campaign of dbCampaigns) {
-        for (const timeRange of timeRanges) {
-          try {
-            const insightsData = await client.getInsights(campaign.metaCampaignId, {
-              level: InsightsLevel.CAMPAIGN,
-              date_preset: timeRange.preset,
-            });
+      // Count successful syncs
+      const successfulSyncs = syncResults.filter(r => !r.error);
+      const failedSyncs = syncResults.filter(r => r.error);
 
-            for (const insight of insightsData) {
-              await db
-                .insert(insights)
-                .values({
-                  reportId: report.id,
-                  campaignId: campaign.id,
-                  adSetId: null,
-                  adId: null,
-                  timeRange: timeRange.name,
-                  dateStart: insight.date_start,
-                  dateEnd: insight.date_stop,
-                  entityName: campaign.name || null,
-                  entityStatus: campaign.status || null,
-                  campaignObjective: campaign.objective || null,
-                  campaignDailyBudget: campaign.dailyBudget || null,
-                  campaignLifetimeBudget: campaign.lifetimeBudget || null,
-                  spend: parseInt(insight.spend) || 0,
-                  impressions: parseInt(insight.impressions) || 0,
-                  clicks: parseInt(insight.clicks) || 0,
-                  ctr: insight.ctr || null,
-                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
-                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
-                  conversions: 0, // Extract from actions if needed
-                  costPerConversion: null,
-                  roas: null,
-                })
-                .onConflictDoUpdate({
-                  target: [insights.reportId, insights.campaignId, insights.timeRange],
-                  set: {
-                    dateStart: insight.date_start,
-                    dateEnd: insight.date_stop,
-                    entityName: campaign.name || null,
-                    entityStatus: campaign.status || null,
-                    spend: parseInt(insight.spend) || 0,
-                    impressions: parseInt(insight.impressions) || 0,
-                    clicks: parseInt(insight.clicks) || 0,
-                    ctr: insight.ctr || null,
-                    cpc: parseInt(insight.cpc) || null,
-                    cpm: parseInt(insight.cpm) || null,
-                  },
-                });
+      totalSynced += successfulSyncs.reduce((sum, r) => sum + r.recordsInserted, 0);
 
-              totalSynced++;
-            }
-          } catch (error) {
-            errors.push(
-              `Failed to sync insights for campaign ${campaign.metaCampaignId} (${timeRange.name}): ${error instanceof Error ? error.message : String(error)}`
-            );
-          }
-        }
-      }
+      // Log summary
+      console.log(`Insights sync completed: ${successfulSyncs.length} successful, ${failedSyncs.length} failed`);
+      console.log(`Total API calls: ${syncResults.reduce((sum, r) => sum + r.apiCalls, 0)}`);
+      console.log(`Total records inserted: ${successfulSyncs.reduce((sum, r) => sum + r.recordsInserted, 0)}`);
+      console.log(`Total records skipped (unchanged): ${successfulSyncs.reduce((sum, r) => sum + r.recordsSkipped, 0)}`);
+
+      // Add errors from failed syncs
+      failedSyncs.forEach(result => {
+        errors.push(`Failed to sync ${result.level} insights: ${result.error}`);
+      });
     } catch (error) {
-      const errorMsg = `Failed to sync campaign insights: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMsg = `Failed to sync insights: ${error instanceof Error ? error.message : String(error)}`;
       errors.push(errorMsg);
-    }
-
-    // Step 4.2: Sync Ad Set Insights
-    try {
-      const dbAdSets = await db
-        .select()
-        .from(adSets)
-        .innerJoin(campaigns, eq(adSets.campaignId, campaigns.id))
-        .where(eq(campaigns.adAccountId, adAccount.id));
-
-      for (const { ad_sets: adSet } of dbAdSets) {
-        for (const timeRange of timeRanges) {
-          try {
-            const insightsData = await client.getInsights(adSet.metaAdSetId, {
-              level: InsightsLevel.ADSET,
-              date_preset: timeRange.preset,
-            });
-
-            for (const insight of insightsData) {
-              await db
-                .insert(insights)
-                .values({
-                  reportId: report.id,
-                  campaignId: null,
-                  adSetId: adSet.id,
-                  adId: null,
-                  timeRange: timeRange.name,
-                  dateStart: insight.date_start,
-                  dateEnd: insight.date_stop,
-                  entityName: adSet.name || null,
-                  entityStatus: adSet.status || null,
-                  adSetOptimizationGoal: adSet.optimizationGoal || null,
-                  adSetBidStrategy: adSet.bidStrategy || null,
-                  adSetDailyBudget: adSet.dailyBudget || null,
-                  adSetLifetimeBudget: adSet.lifetimeBudget || null,
-                  adSetTargeting: adSet.targeting || null,
-                  spend: parseInt(insight.spend) || 0,
-                  impressions: parseInt(insight.impressions) || 0,
-                  clicks: parseInt(insight.clicks) || 0,
-                  ctr: insight.ctr || null,
-                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
-                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
-                  conversions: 0,
-                  costPerConversion: null,
-                  roas: null,
-                })
-                .onConflictDoUpdate({
-                  target: [insights.reportId, insights.adSetId, insights.timeRange],
-                  set: {
-                    dateStart: insight.date_start,
-                    dateEnd: insight.date_stop,
-                    entityName: adSet.name || null,
-                    entityStatus: adSet.status || null,
-                    spend: parseInt(insight.spend) || 0,
-                    impressions: parseInt(insight.impressions) || 0,
-                    clicks: parseInt(insight.clicks) || 0,
-                    ctr: insight.ctr || null,
-                    cpc: parseInt(insight.cpc) || null,
-                    cpm: parseInt(insight.cpm) || null,
-                  },
-                });
-
-              totalSynced++;
-            }
-          } catch (error) {
-            errors.push(
-              `Failed to sync insights for ad set ${adSet.metaAdSetId} (${timeRange.name}): ${error instanceof Error ? error.message : String(error)}`
-            );
-          }
-        }
-      }
-    } catch (error) {
-      const errorMsg = `Failed to sync ad set insights: ${error instanceof Error ? error.message : String(error)}`;
-      errors.push(errorMsg);
-    }
-
-    // Step 4.3: Sync Ad Insights
-    try {
-      const dbAds = await db
-        .select()
-        .from(ads)
-        .innerJoin(adSets, eq(ads.adSetId, adSets.id))
-        .innerJoin(campaigns, eq(adSets.campaignId, campaigns.id))
-        .where(eq(campaigns.adAccountId, adAccount.id));
-
-      for (const { ads: ad } of dbAds) {
-        for (const timeRange of timeRanges) {
-          try {
-            const insightsData = await client.getInsights(ad.metaAdId, {
-              level: InsightsLevel.AD,
-              date_preset: timeRange.preset,
-            });
-
-            for (const insight of insightsData) {
-              await db
-                .insert(insights)
-                .values({
-                  reportId: report.id,
-                  campaignId: null,
-                  adSetId: null,
-                  adId: ad.id,
-                  timeRange: timeRange.name,
-                  dateStart: insight.date_start,
-                  dateEnd: insight.date_stop,
-                  entityName: ad.name || null,
-                  entityStatus: ad.status || null,
-                  adCreativeType: ad.creativeType || null,
-                  adHeadline: ad.headline || null,
-                  adBodyText: ad.bodyText || null,
-                  adCallToAction: ad.callToAction || null,
-                  spend: parseInt(insight.spend) || 0,
-                  impressions: parseInt(insight.impressions) || 0,
-                  clicks: parseInt(insight.clicks) || 0,
-                  ctr: insight.ctr || null,
-                  cpc: insight.cpc ? parseInt(insight.cpc) : null,
-                  cpm: insight.cpm ? parseInt(insight.cpm) : null,
-                  conversions: 0,
-                  costPerConversion: null,
-                  roas: null,
-                })
-                .onConflictDoUpdate({
-                  target: [insights.reportId, insights.adId, insights.timeRange],
-                  set: {
-                    dateStart: insight.date_start,
-                    dateEnd: insight.date_stop,
-                    entityName: ad.name || null,
-                    entityStatus: ad.status || null,
-                    spend: parseInt(insight.spend) || 0,
-                    impressions: parseInt(insight.impressions) || 0,
-                    clicks: parseInt(insight.clicks) || 0,
-                    ctr: insight.ctr || null,
-                    cpc: parseInt(insight.cpc) || null,
-                    cpm: parseInt(insight.cpm) || null,
-                  },
-                });
-
-              totalSynced++;
-            }
-          } catch (error) {
-            errors.push(
-              `Failed to sync insights for ad ${ad.metaAdId} (${timeRange.name}): ${error instanceof Error ? error.message : String(error)}`
-            );
-          }
-        }
-      }
-    } catch (error) {
-      const errorMsg = `Failed to sync ad insights: ${error instanceof Error ? error.message : String(error)}`;
-      errors.push(errorMsg);
+      console.error(errorMsg, error);
     }
 
     // Update sync job with completion status
@@ -512,10 +301,8 @@ export async function syncAdAccountData(
     return {
       success: errors.length === 0,
       syncJobId: syncJob.id,
-      reportId: report.id,
       totalSynced,
       errors,
-      profileId, // Return profileId for AI analysis
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -651,7 +438,6 @@ export async function triggerSync() {
 
     // Sync the data
     const result = await syncAdAccountData(
-      profileId,
       connection.id,
       adAccount.metaAdAccountId,
       connection.accessToken
@@ -661,7 +447,6 @@ export async function triggerSync() {
       return {
         success: true,
         message: `Synced ${result.totalSynced} items successfully`,
-        reportId: result.reportId,
         syncJobId: result.syncJobId
       };
     } else {
@@ -684,88 +469,30 @@ export async function triggerSync() {
 }
 
 /**
- * Triggers sync and then AI analysis
- * This is the main entry point for the sync + analyze workflow
- * @returns Combined result of sync and analysis
+ * DEPRECATED: AI Analysis feature was removed during schema refactoring.
+ *
+ * Previous implementation:
+ * - This function used to trigger sync and then AI analysis
+ * - It relied on the `reports` and `aiAnalyses` tables which have been removed
+ * - AI analysis was performed on aggregated insights data
+ *
+ * To re-implement AI analysis:
+ * 1. Use the new `dailyInsights` table as the data source
+ * 2. Use `insights-query-service.ts` to aggregate data for analysis
+ * 3. Create a new table structure for storing AI analysis results
+ * 4. Consider analyzing trends over time using daily data
+ *
+ * For now, use `triggerSync()` to sync data only.
  */
 export async function triggerSyncAndAnalysis() {
-  // Data Access Layer auth guard
-  const auth = await withAuth();
-  if (!auth.success) {
-    return { success: false, error: auth.error, step: "auth" };
-  }
+  // Just call triggerSync for now
+  const syncResult = await triggerSync();
 
-  try {
-    // Check if user has an active Meta connection first (profile.id = auth.users.id)
-    const connections = await db
-      .select()
-      .from(metaConnections)
-      .where(
-        and(
-          eq(metaConnections.userId, auth.user.id),
-          eq(metaConnections.status, "active")
-        )
-      )
-      .limit(1);
-
-    if (connections.length === 0) {
-      return {
-        success: false,
-        error: "Please connect your Meta account first to sync data",
-        step: "connection_check"
-      };
-    }
-
-    // Step 1: Sync data
-    const syncResult = await triggerSync();
-
-    if (!syncResult.success) {
-      return {
-        success: false,
-        error: syncResult.error,
-        step: "sync",
-        needsAuth: syncResult.needsAuth || false
-      };
-    }
-
-    // Import AI analysis function dynamically to avoid circular dependencies
-    const { performAIAnalysis } = await import("./ai-analysis");
-
-    // Step 2: Perform AI analysis (profileId is used for foreign key)
-    const analysisResult = await performAIAnalysis(
-      syncResult.reportId!,
-      profileId
-    );
-
-    if (!analysisResult.success) {
-      return {
-        success: false,
-        error: analysisResult.error,
-        step: "analysis",
-        syncSuccess: true,
-        syncMessage: syncResult.message,
-        reportId: syncResult.reportId
-      };
-    }
-
-    return {
-      success: true,
-      message: `${syncResult.message}. AI analysis completed.`,
-      reportId: syncResult.reportId,
-      analysisId: analysisResult.analysisId,
-      syncJobId: syncResult.syncJobId,
-      analysis: {
-        overallAssessment: analysisResult.overallAssessment,
-        keyFindings: analysisResult.keyFindings,
-        recommendations: analysisResult.recommendations
-      }
-    };
-  } catch (error) {
-    console.error("Sync and analysis error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      step: "unknown"
-    };
-  }
+  return {
+    ...syncResult,
+    step: syncResult.success ? "sync" : "error",
+    message: syncResult.success
+      ? `${syncResult.message}. Note: AI analysis is currently unavailable.`
+      : syncResult.error
+  };
 }
