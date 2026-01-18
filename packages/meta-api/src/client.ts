@@ -8,6 +8,8 @@ import {
   MetaInsightsParams,
   InsightsLevel
 } from './types';
+import { getRateLimiter } from './rate-limiter';
+import { withRetry } from './retry';
 
 /**
  * Meta Ads API Client
@@ -287,6 +289,122 @@ export class MetaAdsClient {
       return result;
     } catch (error) {
       this.logApiResponse('getInsights', false, undefined, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get insights with daily breakdown for efficient storage
+   * Uses time_increment=1 to get daily data in a single API call
+   * Includes rate limiting and retry logic
+   *
+   * @param entityId - The entity ID (act_XXX, campaign_id, adset_id, or ad_id)
+   * @param level - The insights level (account, campaign, adset, ad)
+   * @param startDate - Start date (YYYY-MM-DD)
+   * @param endDate - End date (YYYY-MM-DD)
+   * @returns Array of daily insights data
+   */
+  async getInsightsWithDailyBreakdown(
+    entityId: string,
+    level: InsightsLevel,
+    startDate: string,
+    endDate: string
+  ): Promise<MetaInsights[]> {
+    const adAccountId = entityId.startsWith('act_')
+      ? entityId
+      : `act_${entityId.split('_')[0]}`;
+
+    const rateLimiter = getRateLimiter(adAccountId);
+
+    // Wait for rate limit token
+    await rateLimiter.acquire();
+
+    const params: MetaInsightsParams = {
+      level,
+      time_range: {
+        since: startDate,
+        until: endDate,
+      },
+      time_increment: 1, // Daily breakdown
+      fields: [
+        'account_id',
+        'account_name',
+        'campaign_id',
+        'campaign_name',
+        'adset_id',
+        'adset_name',
+        'ad_id',
+        'ad_name',
+        'spend',
+        'impressions',
+        'clicks',
+        'cpc',
+        'cpm',
+        'ctr',
+        'reach',
+        'actions',
+        'action_values',
+        'cost_per_action_type',
+        'conversions',
+        'conversion_values',
+        'cost_per_conversion',
+        'date_start',
+        'date_stop',
+      ],
+    };
+
+    this.logApiCall('getInsightsWithDailyBreakdown', {
+      entityId,
+      level,
+      startDate,
+      endDate,
+      time_increment: 1,
+    });
+
+    try {
+      // Use retry logic for transient failures
+      const result = await withRetry(
+        async () => {
+          let insights;
+
+          if (entityId.startsWith('act_')) {
+            const account = new AdAccount(entityId);
+            insights = await account.getInsights(params.fields!, params as any);
+          } else if (level === InsightsLevel.CAMPAIGN) {
+            const campaign = new Campaign(entityId);
+            insights = await campaign.getInsights(params.fields!, params as any);
+          } else if (level === InsightsLevel.ADSET) {
+            const adSet = new AdSet(entityId);
+            insights = await adSet.getInsights(params.fields!, params as any);
+          } else if (level === InsightsLevel.AD) {
+            const ad = new Ad(entityId);
+            insights = await ad.getInsights(params.fields!, params as any);
+          } else {
+            const account = new AdAccount(entityId);
+            insights = await account.getInsights(params.fields!, params as any);
+          }
+
+          // @ts-ignore
+          return insights.map((i: any) => i._data as MetaInsights);
+        },
+        {
+          maxAttempts: 3,
+          initialDelayMs: 2000,
+        }
+      );
+
+      this.logApiResponse('getInsightsWithDailyBreakdown', true, result.length);
+      return result;
+    } catch (error: any) {
+      // Handle rate limit errors
+      if (error?.status === 429 || error?.error?.code === 80004) {
+        const retryAfter = error?.headers?.['retry-after'] || 300;
+        await rateLimiter.handleRateLimit(parseInt(retryAfter));
+        // Retry once after rate limit
+        return this.getInsightsWithDailyBreakdown(entityId, level, startDate, endDate);
+      }
+
+      this.logApiResponse('getInsightsWithDailyBreakdown', false, undefined, error);
       throw error;
     }
   }
