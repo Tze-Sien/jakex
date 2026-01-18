@@ -86,7 +86,7 @@ export const campaigns = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     adAccountId: uuid("ad_account_id")
       .notNull()
-      .references(() => adAccounts.id, { onDelete: "cascade" }),
+      .references(() => adAccounts.id, { onDelete: "restrict" }),
     metaCampaignId: text("meta_campaign_id").notNull(),
     name: text("name"),
     objective: text("objective"),
@@ -113,7 +113,7 @@ export const adSets = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     campaignId: uuid("campaign_id")
       .notNull()
-      .references(() => campaigns.id, { onDelete: "cascade" }),
+      .references(() => campaigns.id, { onDelete: "restrict" }),
     metaAdSetId: text("meta_ad_set_id").notNull(),
     name: text("name"),
     status: text("status"),
@@ -142,7 +142,7 @@ export const ads = pgTable(
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     adSetId: uuid("ad_set_id")
       .notNull()
-      .references(() => adSets.id, { onDelete: "cascade" }),
+      .references(() => adSets.id, { onDelete: "restrict" }),
     metaAdId: text("meta_ad_id").notNull(),
     name: text("name"),
     status: text("status"),
@@ -182,28 +182,18 @@ export const userSelectedAdAccount = pgTable(
   }
 );
 
-export const reports = pgTable("reports", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => profiles.id, { onDelete: "cascade" }),
-  adAccountId: uuid("ad_account_id")
-    .notNull()
-    .references(() => adAccounts.id, { onDelete: "cascade" }),
-  status: text("status").default("active").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const insights = pgTable(
-  "insights",
+export const dailyInsights = pgTable(
+  "daily_insights",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    reportId: uuid("report_id")
+
+    // Account reference (required - all insights belong to an account)
+    adAccountId: uuid("ad_account_id")
       .notNull()
-      .references(() => reports.id, { onDelete: "cascade" }),
+      .references(() => adAccounts.id, { onDelete: "restrict" }),
+
+    // Entity references (polymorphic - only one should be set based on entityLevel)
+    // If all are null, this is account-level insight
     campaignId: uuid("campaign_id").references(() => campaigns.id, {
       onDelete: "cascade",
     }),
@@ -211,67 +201,107 @@ export const insights = pgTable(
       onDelete: "cascade",
     }),
     adId: uuid("ad_id").references(() => ads.id, { onDelete: "cascade" }),
-    timeRange: text("time_range").notNull(),
-    dateStart: date("date_start").notNull(),
-    dateEnd: date("date_end").notNull(),
 
-    // Snapshot: Entity metadata at time of report
-    entityName: text("entity_name"),
-    entityStatus: text("entity_status"),
+    // Meta entity identification
+    metaEntityId: text("meta_entity_id").notNull(), // act_xxx, campaign_id, adset_id, or ad_id
+    entityLevel: text("entity_level").notNull(), // 'account' | 'campaign' | 'adset' | 'ad'
 
-    // Snapshot: Campaign-specific fields
-    campaignObjective: text("campaign_objective"),
-    campaignDailyBudget: bigint("campaign_daily_budget", { mode: "number" }),
-    campaignLifetimeBudget: bigint("campaign_lifetime_budget", {
-      mode: "number",
-    }),
+    // Daily granularity (single day - YYYY-MM-DD)
+    date: date("date").notNull(),
 
-    // Snapshot: AdSet-specific fields
-    adSetOptimizationGoal: text("ad_set_optimization_goal"),
-    adSetBidStrategy: text("ad_set_bid_strategy"),
-    adSetDailyBudget: bigint("ad_set_daily_budget", { mode: "number" }),
-    adSetLifetimeBudget: bigint("ad_set_lifetime_budget", { mode: "number" }),
-    adSetTargeting: jsonb("ad_set_targeting"),
-
-    // Snapshot: Ad-specific fields
-    adCreativeType: text("ad_creative_type"),
-    adHeadline: text("ad_headline"),
-    adBodyText: text("ad_body_text"),
-    adCallToAction: text("ad_call_to_action"),
-
-    // Performance metrics
+    // Core performance metrics (stored as integers - spend in cents)
     spend: bigint("spend", { mode: "number" }).notNull().default(0),
-    impressions: bigint("impressions", { mode: "number" })
-      .notNull()
-      .default(0),
+    impressions: bigint("impressions", { mode: "number" }).notNull().default(0),
     clicks: bigint("clicks", { mode: "number" }).notNull().default(0),
-    ctr: decimal("ctr", { precision: 10, scale: 6 }),
-    cpc: bigint("cpc", { mode: "number" }),
-    cpm: bigint("cpm", { mode: "number" }),
-    conversions: bigint("conversions", { mode: "number" })
-      .notNull()
-      .default(0),
+    reach: bigint("reach", { mode: "number" }).default(0),
+
+    // Conversion metrics
+    conversions: bigint("conversions", { mode: "number" }).notNull().default(0),
+    conversionValue: bigint("conversion_value", { mode: "number" }).default(0), // For ROAS calculation
+
+    // Pre-calculated derived metrics (for query convenience)
+    ctr: decimal("ctr", { precision: 10, scale: 6 }), // clicks/impressions * 100
+    cpc: bigint("cpc", { mode: "number" }), // spend/clicks in cents
+    cpm: bigint("cpm", { mode: "number" }), // (spend/impressions) * 1000 in cents
     costPerConversion: bigint("cost_per_conversion", { mode: "number" }),
-    roas: decimal("roas", { precision: 10, scale: 4 }),
+
+    // Raw API response for detailed breakdowns (actions, action_values, etc.)
+    rawActions: jsonb("raw_actions"),
+    rawActionValues: jsonb("raw_action_values"),
+
+    // Deduplication hash (MD5 of spend|impressions|clicks|conversions|conversionValue)
+    metricsHash: text("metrics_hash").notNull(),
+
+    // Sync metadata
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("insights_report_id_campaign_id_time_range_idx").on(
-      t.reportId,
-      t.campaignId,
-      t.timeRange
+    // Primary deduplication index - ensures one row per entity per day
+    uniqueIndex("daily_insights_entity_date_idx").on(
+      t.adAccountId,
+      t.metaEntityId,
+      t.date
     ),
-    uniqueIndex("insights_report_id_ad_set_id_time_range_idx").on(
-      t.reportId,
-      t.adSetId,
-      t.timeRange
+    // Query by account + date range (most common query pattern)
+    index("daily_insights_account_date_idx").on(t.adAccountId, t.date),
+    // Query by entity level within account
+    index("daily_insights_account_level_date_idx").on(
+      t.adAccountId,
+      t.entityLevel,
+      t.date
     ),
-    uniqueIndex("insights_report_id_ad_id_time_range_idx").on(
-      t.reportId,
-      t.adId,
-      t.timeRange
-    ),
+    // Query specific entity's daily data
+    index("daily_insights_campaign_date_idx").on(t.campaignId, t.date),
+    index("daily_insights_adset_date_idx").on(t.adSetId, t.date),
+    index("daily_insights_ad_date_idx").on(t.adId, t.date),
   ]
 );
+
+// =============================================================================
+// INSIGHTS SYNC STATE - Track sync progress per ad account
+// =============================================================================
+
+export const insightsSyncState = pgTable("insights_sync_state", {
+  id: uuid("id").defaultRandom().primaryKey().notNull(),
+  adAccountId: uuid("ad_account_id")
+    .notNull()
+    .unique()
+    .references(() => adAccounts.id, { onDelete: "cascade" }),
+
+  // Sync window tracking
+  oldestSyncedDate: date("oldest_synced_date"), // Oldest date we have data for
+  newestSyncedDate: date("newest_synced_date"), // Most recent date synced
+
+  // Full sync tracking
+  initialSyncCompleted: boolean("initial_sync_completed").default(false),
+  initialSyncStartedAt: timestamp("initial_sync_started_at", {
+    withTimezone: true,
+  }),
+  initialSyncCompletedAt: timestamp("initial_sync_completed_at", {
+    withTimezone: true,
+  }),
+
+  // Incremental sync tracking
+  lastIncrementalSyncAt: timestamp("last_incremental_sync_at", {
+    withTimezone: true,
+  }),
+
+  // Error tracking
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  lastErrorMessage: text("last_error_message"),
+  lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const syncJobs = pgTable(
   "sync_jobs",
@@ -302,49 +332,36 @@ export const syncJobs = pgTable(
   ]
 );
 
-export const aiAnalyses = pgTable(
-  "ai_analyses",
-  {
-    id: uuid("id").defaultRandom().primaryKey().notNull(),
-    reportId: uuid("report_id")
-      .notNull()
-      .references(() => reports.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-
-    // Analysis content
-    overallAssessment: text("overall_assessment").notNull(),
-    keyFindings: jsonb("key_findings").notNull(), // Array of strings
-    performanceAnalysis: text("performance_analysis").notNull(),
-    creativeAnalysis: text("creative_analysis"),
-    targetingAnalysis: text("targeting_analysis"),
-    practicalAdvice: text("practical_advice"), // 经验谈 - Colloquial practical advice in 白话文
-    recommendations: jsonb("recommendations").notNull(), // Array of Recommendation objects
-    confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
-
-    // Metadata
-    llmProvider: text("llm_provider").notNull(), // 'groq' | 'gemini'
-    llmModel: text("llm_model").notNull(),
-    inputTokens: integer("input_tokens"),
-    outputTokens: integer("output_tokens"),
-    latencyMs: integer("latency_ms"),
-    costUsd: decimal("cost_usd", { precision: 10, scale: 6 }),
-
-    status: text("status").notNull().default("completed"), // 'completed' | 'failed'
-    errorMessage: text("error_message"),
-
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [
-    index("ai_analyses_report_id_idx").on(t.reportId),
-    index("ai_analyses_user_id_idx").on(t.userId),
-    index("ai_analyses_created_at_idx").on(t.createdAt),
-  ]
-);
+// =============================================================================
+// REMOVED TABLES - For future reference
+// =============================================================================
+//
+// The following tables were removed in favor of the new dailyInsights architecture:
+//
+// 1. `reports` table (REMOVED):
+//    - Was a container for each sync operation
+//    - Fields: id, userId, adAccountId, status, createdAt, updatedAt
+//    - One report was created per sync, insights were linked to it
+//    - Problem: Unbounded growth, no deduplication
+//
+// 2. `insights` table (REMOVED):
+//    - Stored aggregated metrics per entity per time_range ('today', 'last_3d', 'last_7d')
+//    - Fields: reportId, campaignId, adSetId, adId, timeRange, dateStart, dateEnd,
+//              entityName, entityStatus, campaign/adSet/ad metadata snapshots,
+//              spend, impressions, clicks, ctr, cpc, cpm, conversions, costPerConversion, roas
+//    - Problem: Redundant data (last_7d includes last_3d data), inflexible date ranges
+//
+// 3. `ai_analyses` table (REMOVED):
+//    - Stored LLM-generated analysis of ad performance
+//    - Fields: reportId (FK to reports), userId, overallAssessment, keyFindings (jsonb array),
+//              performanceAnalysis, creativeAnalysis, targetingAnalysis,
+//              practicalAdvice (经验谈 - colloquial advice in 白话文),
+//              recommendations (jsonb array of {priority, action, expectedImpact, reasoning}),
+//              confidenceScore, llmProvider ('groq'|'gemini'), llmModel,
+//              inputTokens, outputTokens, latencyMs, costUsd, status, errorMessage
+//    - TODO: Redesign to link to adAccountId + dateRange instead of reportId
+//
+// =============================================================================
 
 // Relations
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -379,6 +396,8 @@ export type Ad = typeof ads.$inferSelect;
 export type MetaConnection = typeof metaConnections.$inferSelect;
 export type UserSelectedAdAccount = typeof userSelectedAdAccount.$inferSelect;
 export type SyncJob = typeof syncJobs.$inferSelect;
-export type Report = typeof reports.$inferSelect;
-export type Insight = typeof insights.$inferSelect;
-export type AiAnalysis = typeof aiAnalyses.$inferSelect;
+export type DailyInsight = typeof dailyInsights.$inferSelect;
+export type InsightsSyncState = typeof insightsSyncState.$inferSelect;
+
+// Insert types
+export type NewDailyInsight = typeof dailyInsights.$inferInsert;
