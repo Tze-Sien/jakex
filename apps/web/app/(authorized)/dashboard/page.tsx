@@ -6,15 +6,14 @@ import {
   getAdsFromDatabase,
   getUserSelectedAdAccount,
 } from "@/lib/actions/meta";
-// import { getLatestAIAnalysis } from "@/lib/actions/ai-analysis";
+import { getUserDashboardPreferences } from "@/lib/actions/dashboard-queries";
 import { getServerUser } from "@repo/auth/server";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 import { HeaderActions } from "./components/header-actions";
-// import { AIAnalysisBox } from "./components/ai-analysis-box";
 import { ConnectMetaCard } from "./components/connect-meta-card";
 import { SelectAccountCard } from "./components/select-account-card";
-import { AccountPickerCard } from "./components/account-picker-card";
+import { DashboardOverview } from "./components/dashboard-overview";
 
 export default async function DashboardPage() {
   // Get the authenticated user
@@ -52,15 +51,11 @@ export default async function DashboardPage() {
     ? new Date(Math.max(...syncedEntities.map(e => new Date(e.lastSyncedAt).getTime())))
     : null;
 
-  // // Get latest AI analysis
-  // let latestAnalysis = null;
-  // let analysisError = null;
-  // try {
-  //   latestAnalysis = await getLatestAIAnalysis();
-  // } catch (error) {
-  //   analysisError = error instanceof Error ? error.message : String(error);
-  //   console.error("Failed to fetch AI analysis:", error);
-  // }
+  // Get user dashboard preferences
+  const preferences = await getUserDashboardPreferences(userId);
+  const initialSelectedAccountIds = preferences?.selectedAccountIds || accounts.map(a => a.id);
+  const initialVisibleMetrics = preferences?.visibleMetrics || ["spend", "conversions", "cpc", "ctr"];
+  const initialPeriod = preferences?.defaultPeriod || "last_7_days";
 
   return (
     <>
@@ -94,22 +89,23 @@ export default async function DashboardPage() {
         </div>
       )} */}
 
-      {/* AI Analysis Box */}
-      {/* <AIAnalysisBox analysis={latestAnalysis} isLoading={false} /> */}
-
-      {/* Show appropriate card based on connection, active accounts, and selection status */}
+      {/* Show appropriate card based on connection and active accounts */}
       {!connection ? (
         <ConnectMetaCard />
       ) : !hasActiveAccounts ? (
         <SelectAccountCard />
-      ) : !selectedAccountId ? (
-        <AccountPickerCard accounts={accounts} />
       ) : (
-        /* Placeholder for future content */
-        <div className="text-center text-muted-foreground py-12">
-          <p>Dashboard content coming soon...</p>
-          <p className="text-sm mt-2">Click the Sync button above to fetch data and generate AI analysis</p>
-        </div>
+        <DashboardOverview
+          userId={userId}
+          accounts={accounts.map(account => ({
+            id: account.id,
+            name: account.name || "Unnamed Account",
+            metaAdAccountId: account.metaAdAccountId,
+          }))}
+          initialSelectedAccountIds={initialSelectedAccountIds}
+          initialVisibleMetrics={initialVisibleMetrics}
+          initialPeriod={initialPeriod}
+        />
       )}
     </>
   );
