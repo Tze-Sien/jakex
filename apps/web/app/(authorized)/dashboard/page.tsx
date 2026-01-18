@@ -6,12 +6,12 @@ import {
   getAdsFromDatabase,
   getUserSelectedAdAccount,
 } from "@/lib/actions/meta";
-import { getLatestAIAnalysis } from "@/lib/actions/ai-analysis";
+// import { getLatestAIAnalysis } from "@/lib/actions/ai-analysis";
 import { getServerUser } from "@repo/auth/server";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 import { HeaderActions } from "./components/header-actions";
-import { AIAnalysisBox } from "./components/ai-analysis-box";
+// import { AIAnalysisBox } from "./components/ai-analysis-box";
 import { ConnectMetaCard } from "./components/connect-meta-card";
 import { SelectAccountCard } from "./components/select-account-card";
 import { AccountPickerCard } from "./components/account-picker-card";
@@ -52,15 +52,15 @@ export default async function DashboardPage() {
     ? new Date(Math.max(...syncedEntities.map(e => new Date(e.lastSyncedAt).getTime())))
     : null;
 
-  // Get latest AI analysis
-  let latestAnalysis = null;
-  let analysisError = null;
-  try {
-    latestAnalysis = await getLatestAIAnalysis();
-  } catch (error) {
-    analysisError = error instanceof Error ? error.message : String(error);
-    console.error("Failed to fetch AI analysis:", error);
-  }
+  // // Get latest AI analysis
+  // let latestAnalysis = null;
+  // let analysisError = null;
+  // try {
+  //   latestAnalysis = await getLatestAIAnalysis();
+  // } catch (error) {
+  //   analysisError = error instanceof Error ? error.message : String(error);
+  //   console.error("Failed to fetch AI analysis:", error);
+  // }
 
   return (
     <>
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Debug Info - Remove in production */}
-      {analysisError && (
+      {/* {analysisError && (
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
           <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
             Database Error (Debug Info):
@@ -92,10 +92,10 @@ export default async function DashboardPage() {
             Check your DATABASE_URL environment variable in Vercel
           </p>
         </div>
-      )}
+      )} */}
 
       {/* AI Analysis Box */}
-      <AIAnalysisBox analysis={latestAnalysis} isLoading={false} />
+      {/* <AIAnalysisBox analysis={latestAnalysis} isLoading={false} /> */}
 
       {/* Show appropriate card based on connection, active accounts, and selection status */}
       {!connection ? (
