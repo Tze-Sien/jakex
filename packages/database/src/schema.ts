@@ -363,6 +363,28 @@ export const syncJobs = pgTable(
 //
 // =============================================================================
 
+// User Dashboard Preferences
+export const userDashboardPreferences = pgTable(
+  "user_dashboard_preferences",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    selectedAccountIds: uuid("selected_account_ids").array().default([]),
+    visibleMetrics: text("visible_metrics")
+      .array()
+      .default(["spend", "conversions", "cpc", "ctr"]),
+    defaultPeriod: text("default_period").default("last_7_days"),
+    comparisonEnabled: boolean("comparison_enabled").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("user_dashboard_preferences_user_id_idx").on(t.userId)]
+);
+
 // Relations
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   adAccount: one(adAccounts, {
@@ -398,6 +420,10 @@ export type UserSelectedAdAccount = typeof userSelectedAdAccount.$inferSelect;
 export type SyncJob = typeof syncJobs.$inferSelect;
 export type DailyInsight = typeof dailyInsights.$inferSelect;
 export type InsightsSyncState = typeof insightsSyncState.$inferSelect;
+export type UserDashboardPreferences =
+  typeof userDashboardPreferences.$inferSelect;
 
 // Insert types
 export type NewDailyInsight = typeof dailyInsights.$inferInsert;
+export type NewUserDashboardPreferences =
+  typeof userDashboardPreferences.$inferInsert;
